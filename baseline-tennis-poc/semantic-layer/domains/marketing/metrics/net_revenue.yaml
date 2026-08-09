@@ -1,0 +1,145 @@
+id: net_revenue
+label: Net Revenue
+one_line: Marketing revenue net of refunds, excluding test and wholesale orders.
+
+# ---------------------------------------------------------------- definition
+definition:
+  description: >
+    Sum of gross order amount minus refunded amount, over completed non wholesale
+    orders. This is the governed marketing revenue number.
+  formula: "SUM(gross_amount - refund_amount)"
+  source_table: orders
+  filters:
+    - "status = 'completed'"
+    - "channel != 'wholesale'"
+  filter_rationale: >
+    Test rows are QA artifacts written into production with realistic amounts.
+    Wholesale is a separate business line with much larger baskets and different
+    unit economics. Including either overstates marketing revenue; together they
+    inflate it by roughly a third.
+  additive: true
+  additive_note: >
+    Safe to sum across periods and across dimension values. A quarter is the sum
+    of its months.
+  grain:
+    minimum: day
+    default: month
+  dimensions: [
+               month, channel, segment, category, region, campaign, product, 
+               product_id, racket_type, price_tier, brand, supplier, 
+               lifecycle_stage]
+  dimension_notes:
+    product: >
+      Product level grain. An order containing several products contributes to
+      each of their rows, so product values do not sum to the ungrouped total.
+    racket_type: >
+      power, control or balanced. Rackets only; every other category is NULL and
+      groups under a null row. Competitive players skew heavily to control frames
+      and recreational players to power frames, so this split is real and worth
+      reporting.
+    price_tier: >
+      entry, mid or premium, computed from where the price sits in its category's
+      band. Comparable within a category, not across categories.
+    category: >
+      Requires a join through order_items to products. An order containing items
+      from two categories contributes to both, so category values do not sum to
+      the ungrouped total.
+    campaign: >
+      Groups by the attributed campaign id. Most orders carry no campaign
+      attribution and fall into a NULL group, so campaign values do not sum to the
+      ungrouped total. Attribution is last touch.
+  available_filters:
+    brand: "Restricts to one brand."
+    lifecycle_stage: "Restricts to new, core, clearance or discontinued products."
+    product: "Restricts to one product by name."
+    product_id: "Restricts to one product by id."
+    racket_type: "Restricts to power, control or balanced rackets."
+    price_tier: "Restricts to entry, mid or premium products."
+    is_performance: >
+      1 restricts to performance rackets as the segmentation guide defines them
+      (100 square inches or smaller, above 150 dollars). This makes the guide's
+      own criterion computable.
+    recalled: "1 restricts to products under active recall."
+    campaign_id: >
+      Restricts to orders attributed to one campaign. THIS is how to answer "how
+      much revenue did campaign X drive": pass filters={'campaign_id': N}, not a
+      dimension. Find the id with search_knowledge or list the campaigns first.
+
+      CRITICAL: set the PERIOD to the campaign's own run dates, not the default
+      last_month. A campaign that ran in a previous year has no orders in the
+      most recent month, so the default period returns an empty result. An empty
+      result here means "this campaign did not run in the requested period", NOT
+      "campaign attribution is unavailable". Re query with the campaign's start
+      and end dates before concluding anything is missing.
+    channel: "Restricts to one order channel."
+    segment: "Restricts to one customer segment."
+    category: "Restricts to one product category."
+    region: "Restricts to one region."
+    acquisition_channel: >
+      Restricts to customers ACQUIRED through one channel, which is not the same
+      as orders placed through that channel. Use the channel filter for the
+      order channel.
+  available_filters_note: >
+    Campaign attributed revenue is the governed answer to a campaign performance
+    question, and it will disagree with any figure quoted in a campaign recap deck
+    because the deck is gross over all rows.
+
+# ---------------------------------------------------------------- evaluation
+evaluation:
+  direction: higher_better
+  benchmark_source: benchmarks.yaml
+  seasonal_pattern:
+    - "March through May run materially above the annual band (spring leagues)."
+    - "December runs below band by design; budget and send volume are cut."
+  seasonal_guidance: >
+    Compare to the same month last year, not to the adjacent month. A December
+    decline against November is expected and means nothing on its own.
+
+# ---------------------------------------------------------------- framing
+framing:
+  required_caveats:
+    - >
+      This is NET revenue, after refunds. Finance reports gross. The two numbers
+      will not match and both are correct for their own purpose.
+    - >
+      Test orders and wholesale orders are excluded. A figure pulled from the
+      orders table without these exclusions will be substantially higher.
+  companions:
+    - refund_rate
+    - aov
+  companion_rationale: >
+    Net revenue moves for two different reasons: volume and returns. Pair with
+    refund_rate to tell them apart, and with aov to separate basket size from
+    order count.
+  when_not_to_use:
+    - >
+      Do not use for finance reconciliation or board reporting where gross
+      booked revenue is the agreed basis.
+    - >
+      Do not use to size the wholesale business; wholesale is excluded here by
+      definition.
+  conflict_rule: >
+    This governed metric overrides any revenue figure found in a document,
+    including the Spring League Kickoff recap deck, which quotes gross and was
+    never restated. When they disagree, report this number and name the
+    difference.
+
+# ---------------------------------------------------------------- reliability
+reliability:
+  min_sample: 100
+  coverage: []
+  definition_caveats:
+    - "revenue is net of refunds; a refund is netted into the period it posts, not the period of the original order"
+  cannot_answer:
+    - "gross booked revenue as finance defines it (this metric is net by definition)"
+    - "wholesale revenue (excluded from this metric)"
+    - "revenue attributed across multiple touchpoints (attribution is last touch only)"
+    - "future or projected revenue (this layer reports actuals only)"
+
+# ---------------------------------------------------------------- access
+access:
+  path: metrics_engine
+  raw_sql_allowed: false
+  note: >
+    Only the metrics engine may compute this. The exclusion filters are the whole
+    point of the metric, and hand written SQL is where they get dropped.

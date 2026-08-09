@@ -1,0 +1,64 @@
+id: email_click_rate
+label: Email Click Rate
+one_line: Clicks divided by delivered, transactional mail excluded. The decision metric for email.
+
+definition:
+  description: >
+    Share of delivered marketing messages that produced a click. This is the
+    reliable engagement signal for email, because a click requires a deliberate
+    human action that privacy proxies do not fake.
+  formula: "SUM(clicked) / SUM(delivered)"
+  source_table: email_sends
+  filters:
+    - "delivered = 1"
+    - "email_type != 'transactional'"
+  filter_rationale: >
+    Transactional mail is operational, not marketing, and its click behavior
+    (tracking a package) is unrelated to campaign performance.
+  additive: false
+  additive_note: >
+    A rate. Re derive from summed clicks over summed delivered; never average
+    period rates.
+  grain:
+    minimum: week
+    default: month
+  dimensions: [month, week, segment, campaign, email_type]
+  available_filters:
+    segment: "Restricts to one customer segment (competitive, recreational)."
+    campaign_id: "Restricts to orders or sends attributed to one campaign id."
+    email_type: "Restricts to one email stream (lifecycle, campaign)."
+
+evaluation:
+  direction: higher_better
+  benchmark_source: benchmarks.yaml
+  seasonal_pattern:
+    - "Rises modestly in spring league season alongside open rate."
+    - "Dips in December with reduced send volume and softer offers."
+
+framing:
+  required_caveats:
+    - >
+      Click rate is the decision metric for email, and it is the number to lead
+      with when open rate and click rate disagree.
+  companions:
+    - email_open_rate
+    - revenue_per_email
+  companion_rationale: >
+    Open rate gives reach context. Revenue per email tells you whether the clicks
+    were worth anything, which clicks alone cannot.
+  when_not_to_use:
+    - "Do not use to judge deliverability."
+    - "Do not compare across campaigns with very different offer structures without saying so."
+
+reliability:
+  min_sample: 100
+  coverage: []
+  definition_caveats:
+    - "counts any click in the message, including unsubscribe and footer links, so it slightly overstates offer engagement"
+  cannot_answer:
+    - "click to conversion path (attribution is last touch; there is no path in the data)"
+    - "transactional email engagement (excluded by definition)"
+
+access:
+  path: metrics_engine
+  raw_sql_allowed: false

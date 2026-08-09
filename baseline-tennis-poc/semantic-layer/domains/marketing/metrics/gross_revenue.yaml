@@ -1,0 +1,86 @@
+# Added as CONTENT ONLY, via the declarative `sql` block.
+#
+# This metric exists so the gross versus net conflict can be demonstrated with
+# BOTH numbers in hand. The layer previously discussed the conflict constantly
+# but could only compute one side of it.
+id: gross_revenue
+label: Gross Revenue (finance basis)
+one_line: Gross booked revenue before refunds, the basis finance reports on.
+
+definition:
+  description: >
+    Sum of gross order amount, before refunds are netted out, over completed and
+    refunded non wholesale orders. This is the FINANCE basis, deliberately
+    exposed alongside the governed marketing metric so the two can be compared
+    rather than argued about.
+  formula: "SUM(gross_amount)"
+  source_table: orders
+  filters:
+    - "status IN ('completed', 'refunded')"
+    - "channel != 'wholesale'"
+  filter_rationale: >
+    Refunded orders stay in, because gross means before refunds. Test rows are
+    still excluded: they are not revenue on any basis.
+  additive: true
+  additive_note: "Safe to sum across periods and dimension values."
+  grain:
+    minimum: day
+    default: month
+  dimensions: [month, channel, segment, category, region, campaign]
+  available_filters:
+    region: "Restricts to one region."
+    acquisition_channel: >
+      Restricts to customers ACQUIRED through one channel, which is not the same as
+      orders placed through that channel.
+    channel: "Restricts to one order channel."
+    segment: "Restricts to one customer segment."
+    category: "Restricts to one product category."
+    campaign_id: "Restricts to orders attributed to one campaign."
+
+sql:
+  source: orders
+  value: "SUM(o.gross_amount)"
+  sample_size: "COUNT(DISTINCT o.id)"
+  where: "o.status IN ('completed','refunded') AND o.channel != 'wholesale'"
+
+evaluation:
+  direction: higher_better
+  benchmark_source: benchmarks.yaml
+
+framing:
+  required_caveats:
+    - >
+      This is the FINANCE basis: gross, before refunds. It is NOT the governed
+      marketing number. For marketing performance, net_revenue is authoritative.
+    - >
+      State which basis you are reporting whenever you use this. An unlabelled
+      revenue figure is the source of the gross versus net confusion this metric
+      exists to make explicit.
+  companions: [net_revenue, refund_rate]
+  companion_rationale: >
+    Report gross and net together and the gap between them IS the refund impact,
+    which is more useful than either number alone.
+  when_not_to_use:
+    - >
+      Do not use for marketing performance reporting or against the marketing
+      benchmark bands, which are all computed on a net basis.
+    - "Do not compare this to a net figure without saying that is what you did."
+  conflict_rule: >
+    When a document quotes a revenue number, check WHICH BASIS before calling it
+    a discrepancy. The spring campaign recap deck quotes gross over all rows,
+    which is a third thing again: gross without the test and wholesale
+    exclusions.
+
+reliability:
+  min_sample: 100
+  coverage: []
+  definition_caveats:
+    - "gross means before refunds; it overstates what the business kept"
+    - "still excludes test and wholesale rows, so it will not match a raw SUM over the orders table"
+  cannot_answer:
+    - "marketing performance (use net_revenue; the bands are net)"
+    - "wholesale revenue (excluded by definition)"
+
+access:
+  path: metrics_engine
+  raw_sql_allowed: false

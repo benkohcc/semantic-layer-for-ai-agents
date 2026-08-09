@@ -1,0 +1,90 @@
+id: cac
+label: Customer Acquisition Cost
+one_line: Ad spend divided by attributed signups, per channel. Lower is better.
+
+definition:
+  description: >
+    What it costs to acquire one customer through a paid channel. Spend and
+    attributed signups both come from the ad platform daily feed.
+  formula: "SUM(spend) / SUM(attributed_signups)"
+  source_table: ad_spend
+  filters:
+    - "spend > 0 (organic has no spend and therefore no CAC)"
+  additive: false
+  additive_note: >
+    A ratio. Re derive from summed spend over summed signups for the whole
+    period. Averaging monthly CAC values weights small months equally with large
+    ones and gives the wrong answer.
+  grain:
+    minimum: month
+    default: month
+  dimensions: [month, channel]
+  available_filters:
+    channel: "Restricts to one order channel (web, email, paid_search, paid_social)."
+  available_filters_note: >
+    Only paid channels have a CAC. Filtering to paid_social for a period
+    before its spend tracking began returns no rows, which is the documented
+    coverage hole and not a data error.
+  dimension_notes:
+    channel: >
+      Only paid channels have a CAC. Organic appears in the spend table with zero
+      spend for context and is excluded here, because dividing by zero spend is
+      not a cost of acquisition.
+
+evaluation:
+  direction: lower_better
+  direction_note: >
+    LOWER IS BETTER. A rising CAC means acquisition is getting more expensive.
+    Read every comparison in that direction and do not describe an increase as
+    an improvement.
+  benchmark_source: benchmarks.yaml
+  seasonal_pattern:
+    - >
+      Spring league season raises both spend and conversion, so CAC is roughly
+      flat while volume rises. December CAC often worsens as budgets fall faster
+      than conversion.
+
+framing:
+  required_caveats:
+    - >
+      Lower is better for this metric.
+    - >
+      Attribution is LAST TOUCH. Spend in one channel can produce a signup
+      credited to another, so channel level CAC is directional when channels
+      overlap in the funnel.
+  companions:
+    - new_customer_signups
+    - segment_ltv
+  companion_rationale: >
+    CAC alone cannot say whether a channel is worth it. Compare against segment
+    LTV to judge payback, and read alongside signup volume because a channel can
+    cut CAC simply by shrinking to its cheapest slice.
+  when_not_to_use:
+    - "Do not compute CAC for organic; it has no spend."
+    - "Do not use for periods where the channel's spend was not tracked. Report the boundary instead."
+    - "Do not use for incrementality claims; this is a cost ratio, not a lift measurement."
+
+reliability:
+  min_sample: 100
+  coverage:
+    - dimension: channel
+      value: paid_social
+      limit: >
+        Paid social spend tracking was implemented late. Spend data begins at
+        month 7 of the 24 month window (see paid_social_tracking_start in the
+        catalog). CAC for paid social is UNAVAILABLE for any period before that
+        month. Paid social activity did happen earlier but was never logged.
+        Report the covered months and name the boundary. Do NOT extrapolate
+        backward into the hole, and do not infer an early CAC from later months.
+  definition_caveats:
+    - "attribution is last touch, so channel level CAC misassigns cross channel influence"
+    - "attributed_signups comes from the ad platform feed and will not tie exactly to the customers table"
+  cannot_answer:
+    - "CAC for paid social before the tracking start month (spend was never recorded)"
+    - "CAC for organic (no spend exists)"
+    - "blended or fully loaded CAC including salaries, tooling, or creative production (only media spend is in this feed)"
+    - "multi touch or incremental cost of acquisition (attribution is last touch only)"
+
+access:
+  path: metrics_engine
+  raw_sql_allowed: false

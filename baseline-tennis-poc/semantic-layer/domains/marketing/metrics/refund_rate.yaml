@@ -1,0 +1,103 @@
+id: refund_rate
+label: Refund Rate
+one_line: Refunded amount as a share of gross amount. Lower is better.
+
+definition:
+  description: >
+    Share of gross booked value that came back as refunds. Computed on value, not
+    order count, so one large return weighs more than several small ones.
+  formula: "SUM(refund_amount) / SUM(gross_amount)"
+  source_table: orders
+  filters:
+    - "status IN ('completed', 'refunded')"
+    - "channel != 'wholesale'"
+  filter_rationale: >
+    Fully refunded orders carry status 'refunded' and must stay in the population,
+    otherwise the metric would exclude exactly the events it is measuring. Test
+    rows are excluded; wholesale returns follow different terms.
+  additive: false
+  additive_note: "A ratio. Re derive per period from summed refunds over summed gross."
+  grain:
+    minimum: month
+    default: month
+  dimensions: [
+               month, channel, segment, category, region, product, 
+               product_id, racket_type, price_tier, brand, supplier, 
+               lifecycle_stage]
+  dimension_notes:
+    product: >
+      Product level grain. An order containing several products contributes to
+      each of their rows, so product values do not sum to the ungrouped total.
+    racket_type: >
+      power, control or balanced. Rackets only; every other category is NULL and
+      groups under a null row. Competitive players skew heavily to control frames
+      and recreational players to power frames, so this split is real and worth
+      reporting.
+    price_tier: >
+      entry, mid or premium, computed from where the price sits in its category's
+      band. Comparable within a category, not across categories.
+  available_filters:
+    brand: "Restricts to one brand."
+    lifecycle_stage: "Restricts to new, core, clearance or discontinued products."
+    product: "Restricts to one product by name."
+    product_id: "Restricts to one product by id."
+    racket_type: "Restricts to power, control or balanced rackets."
+    price_tier: "Restricts to entry, mid or premium products."
+    is_performance: >
+      1 restricts to performance rackets as the segmentation guide defines them
+      (100 square inches or smaller, above 150 dollars). This makes the guide's
+      own criterion computable.
+    recalled: "1 restricts to products under active recall."
+    channel: "Restricts to one order channel (web, email, paid_search, paid_social)."
+    segment: "Restricts to one customer segment (competitive, recreational)."
+    category: "Restricts to one product category."
+    region: "Restricts to one region."
+    acquisition_channel: "Restricts to customers acquired through one channel."
+    campaign_id: "Restricts to orders or sends attributed to one campaign id."
+
+evaluation:
+  direction: lower_better
+  direction_note: >
+    LOWER IS BETTER. A rising refund rate is a worsening signal. Never describe an
+    increase as improvement.
+  benchmark_source: benchmarks.yaml
+  seasonal_pattern:
+    - "Slightly elevated after spring league season as fit and feel returns land."
+  known_events:
+    - >
+      A string product recall offers full refunds outside the normal window. Refund
+      rate in periods after the recall date includes recall remediation, which is
+      a deliberate policy action rather than ordinary product dissatisfaction.
+
+framing:
+  required_caveats:
+    - "Lower is better for this metric."
+    - >
+      This is a value based rate, not an order based one. A single high value
+      return moves it more than several small returns.
+  companions:
+    - net_revenue
+    - repeat_purchase_rate
+  companion_rationale: >
+    Refund rate is one of the two nearest behavioral proxies available for product
+    or experience problems, since no satisfaction data exists. Pair with net
+    revenue to size the impact.
+  when_not_to_use:
+    - >
+      Do not read as a satisfaction measure. A refund is a transaction, not a
+      sentiment score, and this business collects no satisfaction data at all.
+    - "Do not compare periods that straddle the recall date without naming the recall."
+
+reliability:
+  min_sample: 100
+  coverage: []
+  definition_caveats:
+    - "a refund is attributed to the period it POSTS, not the period of the original order, so a spike can reflect old orders"
+    - "recall remediation refunds are included and are policy driven rather than ordinary returns"
+  cannot_answer:
+    - "the reason for a refund (no reason code is captured)"
+    - "customer satisfaction or sentiment (no satisfaction data exists; refund rate is a behavioral proxy at best)"
+
+access:
+  path: metrics_engine
+  raw_sql_allowed: false

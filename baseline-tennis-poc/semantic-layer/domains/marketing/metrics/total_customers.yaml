@@ -1,0 +1,73 @@
+# Added as CONTENT ONLY, via the declarative `sql` block.
+id: total_customers
+label: Total Customers
+one_line: Count of customer accounts on file, cumulative rather than per period.
+
+definition:
+  description: >
+    Number of customer accounts created up to and including the end of the
+    requested period. CUMULATIVE: this answers "how big is our base", which is a
+    different question from new_customer_signups ("how many joined this month").
+  formula: "COUNT(customers.id)"
+  source_table: customers
+  date_column: signup_date
+  filters: []
+  additive: false
+  additive_note: >
+    A cumulative stock, not a flow. NEVER sum across periods: adding January's
+    and February's totals double counts everyone who joined before January.
+  grain:
+    minimum: month
+    default: all_time
+  dimensions: [segment, region, acquisition_channel]
+  available_filters:
+    segment: "Restricts to one customer segment."
+    region: "Restricts to one region."
+    acquisition_channel: "Restricts to customers acquired through one channel."
+
+sql:
+  source: customers
+  value: "COUNT(*)"
+  sample_size: "COUNT(*)"
+  where: "1=1"
+  # Cumulative: counts every account created up to the period END, not accounts
+  # created within the period. Without this it silently returns the same number
+  # as new_customer_signups.
+  cumulative: true
+
+evaluation:
+  direction: higher_better
+  benchmark_source: benchmarks.yaml
+
+framing:
+  required_caveats:
+    - >
+      This is accounts on file, NOT active customers. It never goes down, because
+      accounts are not deleted, so it always grows and says nothing about health
+      on its own.
+    - >
+      For an addressable or active base, pair with repeat_purchase_rate, whose
+      denominator is customers active in the trailing 12 months.
+  companions: [new_customer_signups, repeat_purchase_rate]
+  companion_rationale: >
+    Total customers is a vanity number alone. Signups show the inflow and repeat
+    rate shows how much of the base is actually alive.
+  when_not_to_use:
+    - "Do not use as an emailable audience size; many accounts are long dormant."
+    - "Do not read growth in this number as growth in the business."
+
+reliability:
+  min_sample: null
+  is_census: true
+  census_note: "A count of accounts, exact by construction."
+  coverage: []
+  definition_caveats:
+    - "counts accounts, not people; a household sharing an address is several accounts"
+    - "never decreases, because accounts are not deleted when a customer lapses"
+  cannot_answer:
+    - "active customer count (use repeat_purchase_rate's active denominator)"
+    - "emailable or subscribed audience size (no subscription state is recorded)"
+
+access:
+  path: metrics_engine
+  raw_sql_allowed: false

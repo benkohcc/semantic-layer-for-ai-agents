@@ -1,0 +1,6 @@
+.venv/
+__pycache__/
+*.pyc
+data/chroma/
+data/tennis_store.db
+eval/transcripts/

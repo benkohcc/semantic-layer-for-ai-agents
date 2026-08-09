@@ -1,0 +1,86 @@
+# Added as CONTENT ONLY via the declarative `sql` block.
+id: margin_rate
+label: Gross Margin Rate
+one_line: Gross margin as a percentage of net revenue. The efficiency view of margin.
+
+definition:
+  description: >
+    Share of each revenue dollar retained after product cost. The rate companion to
+    gross_margin: it makes brands, categories and price tiers comparable regardless
+    of their volume.
+  formula: "gross margin / net revenue"
+  source_table: orders joined to order_items and products
+  filters:
+    - "status = 'completed'"
+    - "channel != 'wholesale'"
+  additive: false
+  additive_note: >
+    A ratio. Re derive from summed margin over summed revenue; never average
+    period or brand rates, which weights a tiny brand equally with a large one.
+  grain:
+    minimum: month
+    default: month
+  dimensions: [month, channel, segment, category, region, brand, product,
+               price_tier, supplier, lifecycle_stage]
+  available_filters:
+    acquisition_channel: >
+      Restricts to customers ACQUIRED through one channel, which is not the same
+      as orders placed through that channel.
+    campaign_id: "Restricts to orders attributed to one campaign."
+    channel: "Restricts to one order channel."
+    segment: "Restricts to one customer segment."
+    category: "Restricts to one product category."
+    brand: "Restricts to one brand."
+    price_tier: "Restricts to entry, mid or premium."
+    lifecycle_stage: "Restricts to new, core, clearance or discontinued."
+    region: "Restricts to one region."
+
+sql:
+  source: orders
+  # Line items and product cost are needed for every call, not only when a
+  # product dimension is requested.
+  always_join: [product]
+  value: >
+    SUM((oi.unit_price - p.unit_cost) * oi.quantity) * 1.0
+    / NULLIF(SUM(oi.unit_price * oi.quantity), 0)
+  sample_size: "COUNT(DISTINCT o.id)"
+  where: "o.status = 'completed' AND o.channel != 'wholesale'"
+
+evaluation:
+  direction: higher_better
+  benchmark_source: benchmarks.yaml
+  direction_caveat: >
+    Higher is better only holding volume constant. Margin rate rises when cheap
+    high volume lines stop selling, which is not good news. Read it with
+    gross_margin dollars and order_count.
+
+framing:
+  required_caveats:
+    - "GROSS margin rate: product cost only, before any operating cost."
+    - >
+      This rate is computed on line item value before refunds, so it is the mix
+      and pricing view. For the cash view use gross_margin dollars, which nets
+      refunds out.
+  companions:
+    - gross_margin
+    - order_count
+  companion_rationale: >
+    Rate without volume is how businesses talk themselves into shrinking. A brand
+    with the best rate and negligible volume is not the brand to lean into.
+  when_not_to_use:
+    - "Do not compare across categories without noting that their cost structures differ."
+    - "Do not use alone to choose what to stock; pair it with volume."
+
+reliability:
+  min_sample: 100
+  coverage: []
+  definition_caveats:
+    - "unit_cost is current cost, not cost at time of sale"
+    - "a ratio, so it must be re derived per slice and never averaged"
+  cannot_answer:
+    - "net or contribution margin rate (no operating cost data)"
+    - "margin rate after discounts applied at checkout (order level discounts are not itemised)"
+
+access:
+  path: metrics_engine
+  raw_sql_allowed: false

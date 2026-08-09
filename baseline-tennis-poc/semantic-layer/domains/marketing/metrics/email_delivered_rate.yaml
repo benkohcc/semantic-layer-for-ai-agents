@@ -1,0 +1,68 @@
+# DEMONSTRATION OF EXTENSIBILITY (success criterion 6).
+#
+# This metric was added to the layer as CONTENT ONLY. No Python was written for
+# it: the `sql` block below is its entire implementation, compiled by the generic
+# declarative path in metrics_engine.py. It proves that answering a new question
+# needs a content change and a server restart, not a code change.
+
+id: email_delivered_rate
+label: Email Delivered Rate
+one_line: Delivered messages as a share of messages sent, transactional excluded.
+
+definition:
+  description: >
+    Share of sent marketing messages that reached the inbox. A deliverability
+    health check, distinct from engagement.
+  formula: "SUM(delivered) / COUNT(*)"
+  source_table: email_sends
+  filters:
+    - "email_type != 'transactional'"
+  additive: false
+  additive_note: "A rate. Re derive from summed delivered over summed sent."
+  grain:
+    minimum: week
+    default: month
+  dimensions: [month, week, segment, campaign, email_type]
+  available_filters:
+    segment: "Restricts to one customer segment (competitive, recreational)."
+    campaign_id: "Restricts to orders or sends attributed to one campaign id."
+    email_type: "Restricts to one email stream (lifecycle, campaign)."
+
+# Declarative compilation. A metric that names a registered source plus a value
+# expression needs no Python: adding it is purely a content change.
+sql:
+  source: email_sends
+  value: "SUM(e.delivered) * 1.0 / NULLIF(COUNT(*), 0)"
+  sample_size: "COUNT(*)"
+  where: "e.email_type != 'transactional'"
+
+evaluation:
+  direction: higher_better
+  benchmark_source: benchmarks.yaml
+  seasonal_pattern:
+    - "Stable year round; deliverability does not follow demand seasonality."
+
+framing:
+  required_caveats:
+    - >
+      Deliverability normally sits above 97 percent. Below 95 percent for two
+      consecutive sends is the escalation threshold in the runbook.
+  companions:
+    - email_open_rate
+  companion_rationale: >
+    A drop here explains an open rate drop that has nothing to do with content.
+  when_not_to_use:
+    - "Do not read a rise in open rate as evidence of better deliverability; use this metric."
+
+reliability:
+  min_sample: 100
+  coverage: []
+  definition_caveats:
+    - "counts platform accepted delivery, which is not the same as inbox placement versus spam folder"
+  cannot_answer:
+    - "spam folder placement (not tracked)"
+    - "per mailbox provider deliverability (provider is not recorded)"
+
+access:
+  path: metrics_engine
+  raw_sql_allowed: false

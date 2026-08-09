@@ -1,0 +1,89 @@
+id: new_customer_signups
+label: New Customer Signups
+one_line: Count of customer accounts created in the period, by last touch acquisition channel.
+
+definition:
+  description: >
+    Number of customer accounts whose signup date falls in the period. One row
+    per account, counted once, in the month it was created.
+  formula: "COUNT(customers.id)"
+  source_table: customers
+  date_column: signup_date
+  filters: []
+  additive: true
+  additive_note: >
+    Safe to sum across periods and channels. A quarter is the sum of its months,
+    and the channel split sums to the total.
+  grain:
+    minimum: day
+    default: month
+  dimensions: [month, acquisition_channel, region, segment]
+  available_filters:
+    segment: "Restricts to one customer segment (competitive, recreational)."
+    region: "Restricts to one region."
+    acquisition_channel: "Restricts to customers acquired through one channel."
+  dimension_notes:
+    acquisition_channel: >
+      LAST TOUCH. The final marketing touch before signup gets full credit. A
+      customer who saw three ads and then searched is credited entirely to paid
+      search. This is the only attribution the data supports.
+
+evaluation:
+  direction: higher_better
+  benchmark_source: benchmarks.yaml
+  seasonal_pattern:
+    - "March through May run above band; league season drives acquisition."
+    - "December runs below band with reduced paid budget."
+  seasonal_guidance: >
+    Signup volume also responds directly to paid budget decisions, so a move can
+    be a deliberate spend change rather than a market signal. Check the media
+    plan before concluding anything about demand.
+  known_events:
+    - >
+      A paid search budget pause is documented in the Q3 media plan for the most
+      recent complete month. Paid search signups fall roughly 40 percent for the
+      duration. This is planned and expected, not a problem.
+
+framing:
+  required_caveats:
+    - >
+      Channel credit is last touch only. This metric cannot tell you which
+      touches along the path contributed.
+  companions:
+    - cac
+  companion_rationale: >
+    Signup volume without cost context is half the picture. A channel can grow
+    signups by simply spending more, which CAC exposes and volume hides.
+  when_not_to_use:
+    - "Do not use to evaluate channel effectiveness without CAC alongside it."
+    - "Do not use for multi touch or incrementality questions; the data cannot support them."
+  diagnosis_note: >
+    When signups move, decompose by acquisition_channel FIRST. Channel is where
+    almost every real cause shows up in this business, and a single channel
+    moving while others hold flat is the signature of a budget or tracking
+    change rather than a demand change.
+
+reliability:
+  # A COUNT, not a ratio estimated from a sample. The value IS the population, so
+  # a small number is a precise fact about a small month, not an unreliable
+  # estimate. Applying a sample threshold here would label "74 paid search
+  # signups" as directional when it is exact, which is the opposite of honest.
+  # min_sample is deliberately null; see is_census below.
+  min_sample: null
+  is_census: true
+  census_note: >
+    This metric counts rows rather than estimating a rate, so there is no sampling
+    error to disclose. Report the number plainly. Small counts still deserve care
+    when a RATE is derived from them elsewhere, but the count itself is exact.
+  coverage: []
+  definition_caveats:
+    - "acquisition_channel is last touch, so it credits one touch and ignores every earlier one"
+    - "the 'referral' channel only captures referrals made with a member link or code; word of mouth referrals are invisible"
+  cannot_answer:
+    - "multi touch attribution or fractional channel credit (data is last touch only)"
+    - "which specific campaign caused a signup when several ran concurrently in the same channel"
+    - "future signup volume (this layer reports actuals only)"
+
+access:
+  path: metrics_engine
+  raw_sql_allowed: false

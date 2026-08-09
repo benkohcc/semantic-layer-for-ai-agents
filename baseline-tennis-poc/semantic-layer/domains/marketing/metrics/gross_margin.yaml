@@ -1,0 +1,100 @@
+# Added as CONTENT ONLY via the declarative `sql` block.
+#
+# Margin was previously unanswerable, and the honest-but-wrong response would have
+# been to declare it a gap. It is not a gap: a retailer knows what it paid for
+# stock. The fix was to put unit_cost in the data, not to declare its absence.
+id: gross_margin
+label: Gross Margin
+one_line: Net revenue minus cost of goods, on completed non wholesale orders.
+
+definition:
+  description: >
+    Gross profit in dollars: what the business kept after paying for the goods,
+    before any marketing or operating cost. Computed line by line, so it respects
+    the actual product mix rather than an average.
+  formula: "SUM((unit_price - unit_cost) * quantity) net of refunds"
+  source_table: orders joined to order_items and products
+  filters:
+    - "status = 'completed'"
+    - "channel != 'wholesale'"
+  additive: true
+  additive_note: "Dollars of profit. Safe to sum across periods and dimensions."
+  grain:
+    minimum: month
+    default: month
+  dimensions: [month, channel, segment, category, region, brand, product,
+               price_tier, supplier, lifecycle_stage]
+  available_filters:
+    acquisition_channel: >
+      Restricts to customers ACQUIRED through one channel, which is not the same
+      as orders placed through that channel.
+    campaign_id: "Restricts to orders attributed to one campaign."
+    channel: "Restricts to one order channel."
+    segment: "Restricts to one customer segment."
+    category: "Restricts to one product category."
+    brand: "Restricts to one brand."
+    price_tier: "Restricts to entry, mid or premium."
+    lifecycle_stage: "Restricts to new, core, clearance or discontinued."
+    region: "Restricts to one region."
+  dimension_notes:
+    brand: >
+      Own label ("House") carries a materially higher margin than the external
+      brands, which is the point of stocking it. Compare brands on margin RATE as
+      well as dollars: a high volume low margin brand can out-earn a high margin
+      niche one.
+
+sql:
+  source: orders
+  # Line items and product cost are needed for every call, not only when a
+  # product dimension is requested.
+  always_join: [product]
+  value: >
+    SUM((oi.unit_price - p.unit_cost) * oi.quantity
+        - (o.refund_amount / NULLIF((SELECT SUM(quantity) FROM order_items x
+             WHERE x.order_id = o.id), 0)) * oi.quantity)
+  sample_size: "COUNT(DISTINCT o.id)"
+  where: "o.status = 'completed' AND o.channel != 'wholesale'"
+
+evaluation:
+  direction: higher_better
+  benchmark_source: benchmarks.yaml
+  seasonal_pattern:
+    - "Follows revenue: up in spring league season, down in December."
+    - >
+      Clearance periods depress margin rate while lifting margin dollars, because
+      discounted stock still beats dead stock.
+
+framing:
+  required_caveats:
+    - >
+      GROSS margin: product cost only. It does NOT deduct marketing spend,
+      shipping, payment fees, or labour, so it is not profit.
+    - >
+      Refunds are apportioned across the lines of the refunded order, so a partial
+      refund reduces margin proportionally rather than being charged to one item.
+  companions:
+    - margin_rate
+    - net_revenue
+  companion_rationale: >
+    Dollars and rate answer different questions. Margin dollars say what the
+    business earned; margin rate says how efficiently. A brand can lead on one and
+    trail on the other, and acting on the wrong one is the classic merchandising
+    error.
+  when_not_to_use:
+    - "Do not present as profit; operating costs are not in this data."
+    - "Do not compare margin rate across categories without saying so; the bands differ structurally."
+
+reliability:
+  min_sample: 100
+  coverage: []
+  definition_caveats:
+    - "unit_cost is the current cost on the product record, not the cost at the time of sale, so historical margin is approximate if costs have changed"
+    - "gross margin excludes all operating cost; it is not profit"
+  cannot_answer:
+    - "net profit or contribution margin (no operating cost data exists)"
+    - "margin on wholesale (excluded from this metric)"
+    - "landed cost including freight and duty (only unit cost is recorded)"
+
+access:
+  path: metrics_engine
+  raw_sql_allowed: false

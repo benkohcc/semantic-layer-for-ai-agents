@@ -1,0 +1,733 @@
+# Ontology: maps natural language to governed assets.
+#
+# This is the routing layer. A term here resolves to exactly one governed asset,
+# so "revenue" cannot quietly become a different number depending on who asks.
+
+ontology_version: 1
+
+# ---------------------------------------------------------------------------
+# Concept to asset mappings
+# ---------------------------------------------------------------------------
+
+concepts:
+  - terms: ["open rate", "opens", "email opens", "opened", "open %", 
+            "email engagement", "are people opening our emails", 
+            "is anyone reading our email"]
+    resolves_to: email_open_rate
+    asset_type: metric
+    note: >
+      Governed definition excludes machine opens and transactional mail. Any raw
+      open rate from another tool will be higher and is not comparable.
+
+  - terms: ["click rate", "clicks", "clickthrough", "ctr", 
+            "click through rate", "are people clicking", 
+            "is anyone clicking our emails"]
+    resolves_to: email_click_rate
+    asset_type: metric
+
+  - terms: ["revenue", "sales", "sales revenue", "top line", 
+            "how much did we make", "turnover", "how much money did we make", 
+            "how much did we sell", "did we grow", "takings", "money in", 
+            "sales figures"]
+    resolves_to: net_revenue
+    asset_type: metric
+    note: >
+      The governed marketing metric is NET of refunds and excludes test and
+      wholesale orders. Gross figures appearing in documents are non
+      authoritative for marketing reporting.
+
+  - terms: ["signups", "new customers", "acquisitions", "new accounts", 
+            "registrations", "new signups", "how many people signed up", 
+            "how many joined", "new business", "customer growth", 
+            "how many new accounts"]
+    resolves_to: new_customer_signups
+    asset_type: metric
+
+  - terms: ["aov", "average order value", "basket size", "order value", 
+            "average basket", "how big is an order", "typical order size", 
+            "spend per order"]
+    resolves_to: aov
+    asset_type: metric
+    note: >
+      Measures the basket, not the customer. The two segments have nearly the SAME
+      AOV even though competitive customers are worth about 2.2 times as much,
+      because small frequent baskets and large rare ones cancel out. Do not use AOV
+      to rank segment value; use segment_ltv.
+
+  - terms: ["repeat rate", "repeat purchase rate", "retention", 
+            "returning customers", "come back", "do customers come back", 
+            "are people reordering", "loyalty", "stickiness", 
+            "do they buy again"]
+    resolves_to: repeat_purchase_rate
+    asset_type: metric
+    note: >
+      This is a repeat rate among active buyers. It is churn adjacent, and churn
+      in this business is inferred from purchase silence, never observed.
+
+  - terms: ["cac", "customer acquisition cost", "cost per acquisition", 
+            "cpa", "acquisition cost", "what does it cost to get a customer", 
+            "cost per customer", "which channel is cheapest", 
+            "acquisition efficiency", "how expensive is acquisition"]
+    resolves_to: cac
+    asset_type: metric
+    note: "Lower is better. Paid social has no spend data before the tracking start month."
+
+  - terms: ["refund rate", "returns", "return rate", "refunds", 
+            "how many refunds", "are people returning stuff", "return volume"]
+    resolves_to: refund_rate
+    asset_type: metric
+    note: "Lower is better."
+
+  - terms: ["revenue per email", "rpe", "email efficiency", 
+            "revenue per send"]
+    resolves_to: revenue_per_email
+    asset_type: metric
+    note: "Strictly non additive. Re derive per period; never average."
+
+  - terms: ["delivered rate", "deliverability", "delivery rate", 
+            "inbox rate", "bounce rate", "are emails getting through", 
+            "are emails landing in inbox", "are emails arriving", 
+            "delivery problems", "bounces"]
+    resolves_to: email_delivered_rate
+    asset_type: metric
+    note: >
+      Deliverability, distinct from engagement. A rise in open rate is NOT
+      evidence of better deliverability; this metric is. Added to the layer as a
+      YAML descriptor with no code change, which is the extensibility claim.
+
+  - terms: ["ltv", "lifetime value", "customer value", "segment value", 
+            "worth long term", "long term value", 
+            "how much is a customer worth", 
+            "which customers are most valuable", "value per customer"]
+    resolves_to: segment_ltv
+    asset_type: metric
+    note: "Historical realized value, not a projection."
+
+  - terms: ["churn", "churned", "churn rate", "lost customers", 
+            "stopped buying", "attrition"]
+    resolves_to: repeat_purchase_rate
+    asset_type: metric
+    routing_note: >
+      There is no churn metric, because churn is not observed in this business.
+      Churn questions are answered through the inferred definition (no completed
+      order in the trailing 12 months) and MUST disclose that the number is an
+      inference, not a measurement. See the churn definition in the spine.
+    disclosure_required: true
+    answer_shape: >
+      ANSWER, DO NOT DECLINE. The absence of a dedicated churn metric is not a
+      reason to refuse a churn question. Report repeat_purchase_rate, state its
+      complement in plain language (a repeat rate of 77 percent means 23 percent
+      of active customers ordered only once in the window), and disclose that
+      churn here is inferred from purchase silence rather than observed.
+
+      The honest answer is "here is the inferred figure and here is exactly what
+      the inference assumes", NOT "I cannot tell you". A clean decline is correct
+      only when the data cannot support the question at all, which is not the
+      case here: the definition exists, it is just an inference.
+    counts_note: >
+      A churn COUNT is derivable from repeat_purchase_rate and its sample size
+      (the sample_size field is the count of active customers), so a count
+      question is answerable with the same disclosure.
+
+  # ---- milestone 2: traversal concepts ------------------------------------
+  # These resolve to an ACCESS PATH, not to a metric. Whether the path exists
+  # depends on whether the graph is enabled; when it is not, the correct answer
+  # is a capability decline naming what is missing.
+
+  - terms: ["referral chain", "referral chains", "referrals of referrals", 
+            "chain depth", "downstream referrals", "referral network", 
+            "referral tree"]
+    resolves_to: build_audience
+    asset_type: access_path
+    archetype: graph-traversal
+    sub_shape: influence-analysis
+    note: >
+      Unknown depth traversal. Requires the graph access path. Chain depth is
+      attributed to the chain ROOT's acquisition channel, never to the referred
+      customer's own channel (which is always 'referral').
+
+  - terms: ["spread", "at risk because of", "exposed to", "propagation", 
+            "more likely to churn themselves", "knock on effect"]
+    resolves_to: build_audience
+    asset_type: access_path
+    archetype: graph-traversal
+    sub_shape: propagation
+    note: >
+      Propagation through a relationship. Requires the graph access path, a
+      temporal ordering check, and a non exposed comparison cohort. The measured
+      quantity must still come from get_metric with a cohort filter.
+
+  - terms: ["trace everyone who", "affected by", "trace the customers", 
+            "impact trace", "everyone who bought"]
+    resolves_to: build_audience
+    asset_type: access_path
+    archetype: graph-traversal
+    sub_shape: impact-trace
+    note: >
+      Multi hop trace. Requires the graph access path and a matched control that
+      holds campaign and category constant.
+
+
+  # ---- volume and base size metrics ---------------------------------------
+
+  - terms: ["order count", "how many orders", "how many sales", "order volume",
+            "how many transactions", "how busy were we", "number of orders"]
+    resolves_to: order_count
+    asset_type: metric
+    note: >
+      The volume companion to net_revenue. Revenue can rise from bigger baskets or
+      from more orders; this is how you tell which.
+
+  - terms: ["total customers", "how many customers do we have",
+            "how big is our base", "customer count", "how many accounts",
+            "size of our list", "how big is our database"]
+    resolves_to: total_customers
+    asset_type: metric
+    note: >
+      Cumulative accounts on file, NOT active customers and NOT an emailable
+      audience. It only ever grows. For an addressable population use
+      build_audience; for an active one use repeat_purchase_rate's denominator.
+
+  - terms: ["gross revenue", "gross sales", "revenue before refunds",
+            "what finance reports", "booked revenue", "finance number"]
+    resolves_to: gross_revenue
+    asset_type: metric
+    note: >
+      The FINANCE basis, before refunds. Exposed deliberately so gross and net can
+      be compared rather than argued about. For marketing performance net_revenue
+      is authoritative; always say which basis you are reporting.
+
+  - terms: ["items per order", "basket depth", "units per order",
+            "how many things per order", "lines per order"]
+    resolves_to: items_per_order
+    asset_type: metric
+
+  # ---- product level concepts ---------------------------------------------
+
+  - terms: ["best selling", "best sellers", "top sellers", "which products sell",
+            "best selling category", "top products", "which rackets sell best",
+            "worst selling"]
+    resolves_to: order_count
+    asset_type: metric
+    archetype: targeting-and-audience
+    note: >
+      A PRODUCT GRAIN metric question. Use get_metric with the 'product' or
+      'category' dimension. Prefer order_count over net_revenue for "best
+      selling", because revenue conflates popularity with price.
+
+  - terms: ["which rackets do competitive players prefer", "product preference",
+            "what do competitive players buy", "what do recreational players buy",
+            "power racket", "control racket", "racket type",
+            "do they prefer power or control", "which head size"]
+    resolves_to: order_count
+    asset_type: metric
+    archetype: targeting-and-audience
+    note: >
+      Answerable with the 'racket_type', 'product' or 'price_tier' dimension plus a
+      'segment' filter. Competitive players skew to CONTROL frames and recreational
+      to POWER frames; a split reproducing that is expected, not a finding.
+
+  - terms: ["performance racket", "is_performance",
+            "what counts as a performance racket"]
+    resolves_to: order_count
+    asset_type: metric
+    note: >
+      The segmentation guide defines a performance racket as 100 square inches or
+      smaller above 150 dollars. That criterion is computable: pass
+      filters={'is_performance': 1}.
+
+  # ---- cross-sell and affinity --------------------------------------------
+
+  - terms: ["cross sell", "cross-sell", "what else do they buy",
+            "what pairs with", "bundle", "product affinity", "also bought",
+            "what should I recommend", "attach rate", "basket analysis"]
+    resolves_to: category_affinity
+    asset_type: access_path
+    archetype: targeting-and-audience
+    note: >
+      READ LIFT, NOT SHARE. Popular categories look affine to everything; lift near
+      1.0 means there is no real pairing however high the share. Customer level
+      co-purchase, so it supports a cross-sell campaign rather than a bundle.
+
+  # ---- audience building --------------------------------------------------
+
+  - terms: ["who should I send", "who should I target", "build an audience",
+            "build me an audience", "who to email", "target list", "audience",
+            "who is due for a restring", "who is at risk", "win back",
+            "winback", "lapsed customers", "which customers should I target",
+            "send a promotion to"]
+    resolves_to: build_audience
+    asset_type: access_path
+    archetype: targeting-and-audience
+    note: >
+      Selects a population by behaviour and returns a HANDLE plus a count. Then
+      MEASURE it: pass the handle to get_metric as cohort with segment_ltv or
+      repeat_purchase_rate. A count alone does not say whether targeting is worth
+      it. No contact details exist in this warehouse.
+
+  # ---- campaign history ---------------------------------------------------
+
+  - terms: ["past campaigns", "campaign history", "which campaign performed best",
+            "what campaigns did we run", "why did we run", "campaign brief",
+            "campaign objective", "what did we learn", "comparable campaign",
+            "similar campaign", "who did we target"]
+    resolves_to: search_campaigns
+    asset_type: access_path
+    note: >
+      Campaign questions have two halves. search_campaigns returns the BRIEF (why
+      it ran, who it targeted, the offer, the learnings); get_metric with a
+      campaign_id filter returns the NUMBERS. Report both: revenue without an
+      objective cannot be judged a success.
+
+
+  # ---- brand, margin, supplier and inventory ------------------------------
+
+  - terms: ["brand", "brands", "which brands", "what brands do we carry",
+            "brand performance", "which brand sells best", "own label",
+            "house brand", "manufacturer"]
+    resolves_to: order_count
+    asset_type: metric
+    archetype: targeting-and-audience
+    note: >
+      Brand is a dimension on net_revenue, order_count, aov, refund_rate,
+      gross_margin and margin_rate. Competitive players skew heavily to the
+      performance brands (Baseline, Cordage, Meridian) and recreational players to
+      the value brands, so a brand split by segment is real. For brand positioning
+      and supplier terms see the Brand and Supplier Guide.
+
+  - terms: ["margin", "gross margin", "profit", "profitability", "markup",
+            "what is our margin", "margin dollars", "how much do we make on"]
+    resolves_to: gross_margin
+    asset_type: metric
+    note: >
+      GROSS margin: revenue minus product cost, before any operating cost. It is
+      not profit. Pair with margin_rate: dollars and rate answer different
+      questions and a brand can lead on one and trail on the other.
+
+  - terms: ["margin rate", "margin percentage", "margin percent", "gross margin rate",
+            "how profitable", "which is most profitable"]
+    resolves_to: margin_rate
+    asset_type: metric
+    note: >
+      The efficiency view. Read with volume: a high rate on negligible volume is
+      not the thing to lean into. The blended target is fifty percent, and
+      performance brands running in the low forties are performing as intended.
+
+  - terms: ["supplier", "suppliers", "vendor", "vendors", "lead time",
+            "who makes our", "payment terms", "where do we source"]
+    resolves_to: brand-and-supplier-guide
+    asset_type: document
+    note: >
+      Supplier terms, lead times and minimum orders. Supplier is also a dimension
+      on the margin metrics. Long lead time vendors cannot be reordered inside a
+      season, which is the usual cause of a core stockout.
+
+  - terms: ["stock", "stock level", "inventory", "out of stock", "stockout",
+            "availability", "are we out of", "what is in stock"]
+    resolves_to: inventory-health-notes
+    asset_type: document
+    note: >
+      Stock is held per product and must be read against LIFECYCLE STAGE: a
+      clearance line at zero is a success, a core line at zero in season is a
+      failure. Only the CURRENT level exists, with no history, so "how long has it
+      been out of stock" cannot be answered.
+
+  - terms: ["lifecycle", "lifecycle stage", "new products", "new lines",
+            "clearance", "discontinued", "which products are new",
+            "what are we clearing"]
+    resolves_to: order_count
+    asset_type: metric
+    note: >
+      lifecycle_stage is a dimension and a filter: new, core, clearance,
+      discontinued. Clearance depresses margin RATE while lifting margin DOLLARS,
+      which is intended and not a problem. See the Merchandising Playbook.
+
+  - terms: ["persona", "personas", "customer persona", "league regular",
+            "weekend social player", "returning player", "parent buyer",
+            "who is our customer"]
+    resolves_to: customer-personas
+    asset_type: document
+    note: >
+      Personas are narrative and are NOT in the data. Do not report numbers by
+      persona. Segment is the behavioral classification that can be reported on.
+
+  - terms: ["stringing turnaround", "how long does a restring take",
+            "service level", "sla", "turnaround commitment"]
+    resolves_to: stringing-sla-2026
+    asset_type: document
+    note: >
+      The 2026 SLA is current: two business days, same day in all regions. A 2025
+      SLA also exists and was genuinely in force then, so it is correct for its own
+      period and superseded now. Say which period you are answering for.
+
+  # ---- document concepts --------------------------------------------------
+
+  - terms: ["refund policy", "return policy", "returns policy", 
+            "can customers return", "refund window"]
+    resolves_to: refund-policy-2026
+    asset_type: document
+    note: >
+      Canonical, effective this year. A 2024 DRAFT exists in the index and was
+      never adopted. Answer only from the canonical version and say the draft is
+      superseded if it surfaces.
+
+  - terms: ["segment definition", "competitive segment", 
+            "recreational segment", "segmentation", "segment criteria"]
+    resolves_to: segmentation-guide
+    asset_type: document
+
+  - terms: ["recall", "recalled product", "recalled string", 
+            "product recall", "safety notice"]
+    resolves_to: string-recall-notice
+    asset_type: document
+
+  - terms: ["media plan", "budget pause", "paid search pause", "spend plan", 
+            "budget change"]
+    resolves_to: q3-media-plan
+    asset_type: document
+
+  - terms: ["spring campaign", "spring league kickoff", "campaign recap", 
+            "campaign results"]
+    resolves_to: spring-campaign-recap
+    asset_type: document
+    note: >
+      This deck quotes GROSS revenue and was never restated. For any revenue
+      number, the governed net_revenue metric wins. Cite the deck for narrative
+      and product mix, not for figures.
+
+  - terms: ["seasonality", "promo calendar", "promotional calendar", 
+            "when do we promote", "december dip"]
+    resolves_to: promo-calendar
+    asset_type: document
+
+  - terms: ["email program", "email streams", "lifecycle email", 
+            "how we measure email"]
+    resolves_to: email-program-overview
+    asset_type: document
+
+  - terms: ["brand voice", "tone", "how we write", "copy guidelines"]
+    resolves_to: brand-voice
+    asset_type: document
+
+  - terms: ["loyalty", "points", "referral credit", "loyalty program", 
+            "rewards"]
+    resolves_to: loyalty-program-terms
+    asset_type: document
+
+  - terms: ["stringing", "restring", "service turnaround", 
+            "stringing service"]
+    resolves_to: stringing-service-faq
+    asset_type: document
+
+  - terms: ["test orders", "wholesale", "data quirks", "known exclusions", 
+            "reporting notes", "attribution model"]
+    resolves_to: data-and-reporting-notes
+    asset_type: document
+
+# ---------------------------------------------------------------------------
+# Known-missing concepts. These resolve to an authoritative decline rather than
+# to a failed search, so "what's our NPS" gets a real answer.
+# ---------------------------------------------------------------------------
+
+absent_concepts:
+  - terms: ["nps", "net promoter score", "satisfaction", 
+            "customer satisfaction", "csat", "sentiment", 
+            "how do customers feel", "happiness", "are customers happy", 
+            "customer happiness", "survey", "feedback score"]
+    status: not_collected
+    resolves_to: DOMAIN.md#what-this-layer-cannot-answer
+    response_rule: >
+      CLEAN DECLINE. State that no satisfaction, sentiment, or NPS data is
+      collected anywhere in this business: no survey instrument, no survey table,
+      no third party feed. Offer repeat_purchase_rate and refund_rate as the
+      nearest available behavioral signals while stating plainly that neither
+      measures sentiment. Produce NO number for satisfaction itself.
+    nearest_available: [repeat_purchase_rate, refund_rate]
+
+  - terms: ["multi touch", "multi-touch attribution", "attribution path", 
+            "touch path", "first touch", "assisted conversions", 
+            "path to conversion", "incrementality"]
+    status: not_supported_by_data
+    resolves_to: DOMAIN.md#attribution-is-last-touch-only
+    response_rule: >
+      DECLINE the multi touch part. Attribution is last touch only and the data
+      contains no touch path. Offer last touch figures explicitly labeled as last
+      touch.
+
+  - terms: ["forecast", "projection", "predict", "next quarter", 
+            "next month", "will be", "expected revenue", "outlook", 
+            "guidance", "what will"]
+    status: out_of_scope
+    resolves_to: DOMAIN.md#forecasting-is-out-of-scope
+    response_rule: >
+      SCOPE DECLINE. This layer reports actuals and does not forecast. Offer the
+      historical trend, explicitly labeled as history and NOT a prediction.
+      Produce NO forecast number.
+
+  - terms: ["competitor", "competitor pricing", "market share", 
+            "versus competitors", "industry benchmark"]
+    status: not_collected
+    resolves_to: DOMAIN.md#no-competitor-data
+    response_rule: >
+      DECLINE. No competitor pricing or market share data exists. Internal
+      benchmarks are available and are internal only.
+
+
+  - terms: ["unsubscribe rate", "unsubscribes", "opt outs", "opt out rate",
+            "list churn", "how many unsubscribed"]
+    status: not_collected
+    resolves_to: DOMAIN.md#what-this-layer-cannot-answer
+    response_rule: >
+      CLEAN DECLINE. No unsubscribe or opt out event is recorded in email_sends.
+      The table has delivered, opened, machine_opened and clicked, and nothing
+      about subscription state. Offer email_delivered_rate and email_click_rate as
+      the available program health signals while saying neither measures list
+      attrition.
+    nearest_available: [email_delivered_rate, email_click_rate]
+
+  - terms: ["conversion rate", "visit to order", "site conversion", "funnel",
+            "traffic", "sessions", "visitors", "bounce rate on site",
+            "add to cart", "cart abandonment"]
+    status: not_collected
+    resolves_to: DOMAIN.md#what-this-layer-cannot-answer
+    response_rule: >
+      CLEAN DECLINE. There is no web analytics, session, or traffic data in this
+      warehouse. Only placed orders exist, so no funnel step above the order can be
+      measured and no conversion rate can be computed. Do not substitute a
+      click-to-order ratio and call it conversion.
+    nearest_available: [email_click_rate, order_count]
+
+  - terms: ["which creative", "ad creative", "which ad", "creative performance",
+            "which image", "which subject line", "copy test", "a/b test",
+            "keyword", "which keyword", "bid", "how much should I bid"]
+    status: not_collected
+    resolves_to: DOMAIN.md#what-this-layer-cannot-answer
+    response_rule: >
+      CLEAN DECLINE. ad_spend is CHANNEL level only. There is no creative, ad,
+      keyword, or subject line dimension anywhere in the data, and no experiment
+      results. Channel level performance is available and is not the same thing.
+    nearest_available: [cac, new_customer_signups]
+
+  - terms: ["most likely to buy", "likely to buy", "propensity", "probability to purchase",
+            "who will buy", "predict who", "score customers", "likelihood to purchase",
+            "next best action", "churn risk score", "predicted"]
+    status: out_of_scope
+    resolves_to: DOMAIN.md#forecasting-is-out-of-scope
+    response_rule: >
+      SCOPE DECLINE, then OFFER THE ALTERNATIVE. This layer reports actuals and
+      does not score or rank customers by predicted behaviour. Say so, then offer
+      build_audience: a behavioural audience describes who DID something, which is
+      usually what the question actually needs. Label it explicitly as past
+      behaviour and NOT a likelihood to purchase.
+    nearest_available: [build_audience, repeat_purchase_rate]
+
+  - terms: ["email addresses", "contact details", "phone numbers", "customer names",
+            "export the list", "give me the emails", "send me the list",
+            "download the audience", "pii", "personal data"]
+    status: not_collected
+    resolves_to: DOMAIN.md#what-this-layer-cannot-answer
+    response_rule: >
+      CLEAN DECLINE, and be specific about why. This warehouse holds NO personally
+      identifiable information: no names, no email addresses, no phone numbers,
+      and there is no export path. build_audience returns customer ids and a count.
+      The audience DEFINITION is what goes to the email platform; the contact list
+      is assembled there, not here.
+    nearest_available: [build_audience]
+
+
+  - terms: ["stock history", "how long out of stock", "how often out of stock",
+            "how long has this line been out of stock",
+            "how long has it been out of stock", "been out of stock",
+            "stock movement", "reorder history", "inventory turns",
+            "days out of stock", "stockout frequency"]
+    status: not_collected
+    resolves_to: DOMAIN.md#what-this-layer-cannot-answer
+    response_rule: >
+      CLEAN DECLINE, and be precise about the boundary. The CURRENT stock level per
+      product IS available and should be offered. What does not exist is stock
+      HISTORY: no movement log, no reorder history, no snapshots. So "are we out of
+      stock" is answerable and "how long have we been out of stock" is not.
+      Do not estimate a duration from a launch date.
+    nearest_available: [order_count]
+
+  - terms: ["net profit", "profit after costs", "bottom line", "operating margin",
+            "contribution margin", "profitability after marketing",
+            "are we profitable", "ebitda"]
+    status: not_collected
+    resolves_to: DOMAIN.md#what-this-layer-cannot-answer
+    response_rule: >
+      CLEAN DECLINE with the nearest thing named. GROSS margin is available and
+      covers PRODUCT COST ONLY. This warehouse holds no operating cost: no
+      salaries, no fulfilment, no shipping cost, no payment fees, no marketing
+      spend allocation beyond channel level media. Offer gross_margin explicitly
+      labelled as gross, and state plainly that it is not profit and must not be
+      presented as though it were.
+    nearest_available: [gross_margin, margin_rate]
+
+# ---------------------------------------------------------------------------
+# Combination rules: what wins when sources disagree.
+# ---------------------------------------------------------------------------
+
+combination_rules:
+  - rule: governed_metric_beats_document
+    statement: >
+      A governed metric always overrides a number found in a document, deck, or
+      report, no matter how recent or official the document looks.
+    rationale: >
+      Documents are snapshots taken with unknown filters at an unknown time and
+      are rarely restated. The metric definition is explicit and enforced.
+    application: >
+      Report the governed number. Name the discrepancy and explain why they
+      differ (usually gross versus net, or missing exclusions). Do not silently
+      drop the document figure and do not average the two.
+    worked_example: >
+      The spring campaign recap deck quotes gross revenue over all rows. The
+      governed net_revenue metric excludes test and wholesale rows and nets out
+      refunds. The governed figure is the answer; the deck figure is explained.
+
+  - rule: canonical_beats_draft
+    statement: >
+      Among documents, higher authority wins: canonical, then draft, then
+      superseded. Within the same authority, the later effective date wins.
+    application: >
+      Answer from the canonical document only. If a superseded or draft version
+      surfaced in retrieval, say so explicitly so the reader knows it exists and
+      was rejected.
+    worked_example: >
+      The 2024 refund policy DRAFT was never adopted and is superseded by the
+      current canonical policy. Its 30 day window and restocking fee were never
+      in force.
+
+  - rule: metric_definition_beats_intuition
+    statement: >
+      When a question implies a definition that differs from the governed one,
+      answer with the governed definition and name the difference.
+    worked_example: >
+      A question about "opens" implies raw opens. The governed metric excludes
+      machine opens, so the answer is lower than a raw count and the reason is
+      stated.
+
+  - rule: absent_data_beats_inference
+    statement: >
+      When a concept is declared absent, the decline wins over any adjacent
+      number that could be pressed into service as a proxy.
+    application: >
+      Never answer a satisfaction question with a repeat rate figure presented as
+      satisfaction. Offer it as adjacent behavioral evidence with the limitation
+      stated, or decline outright.
+
+# ---------------------------------------------------------------------------
+# Archetype routing: which playbook handles which question shape.
+# ---------------------------------------------------------------------------
+
+archetype_triggers:
+  - archetype: metric-lookup
+    playbook: metric-lookup
+    triggers:
+      - "what is / what was / how much / how many"
+      - "a rate, a total, a count, an average"
+      - "comparison across an allowed dimension (by channel, by segment, by month)"
+      - "is X healthy / is X good (adds a benchmark judgment)"
+
+  - archetype: metric-decline-diagnosis
+    playbook: metric-decline-diagnosis
+    triggers:
+      - "why did X drop / rise / change"
+      - "what caused / what happened to"
+      - "is something wrong with X"
+    note: >
+      "Did the December dip mean something is wrong" is this archetype, and the
+      answer runs through seasonality before anything else.
+
+  - archetype: policy-question
+    playbook: policy-question
+    triggers:
+      - "what is our policy / what are the rules / what are the criteria"
+      - "how do we define / what counts as"
+      - "what does the document say"
+
+  # ---- milestone 2: graph traversal ------------------------------------
+  # Three question sub-shapes all route to the same playbook and tool. They are
+  # listed separately because they need different operations and different
+  # evidence, not because they need different procedures.
+  - archetype: graph-traversal
+    playbook: graph-traversal
+    access_path: build_audience
+    milestone: 2
+    sub_shapes:
+      - name: influence-analysis
+        triggers:
+          - "referrals of referrals"
+          - "chains / chain depth / downstream"
+          - "who came from / traced back to"
+          - "network position / most influential"
+        operation: chain_stats or referral_chain
+        note: >
+          Chain depth must be attributed to the chain ROOT's acquisition channel.
+          A referred customer's own channel is always 'referral'.
+
+      - name: propagation
+        triggers:
+          - "spread / spreads"
+          - "at risk because of"
+          - "exposed to"
+          - "more likely to X themselves"
+        operation: exposed_cohort
+        note: >
+          Requires the temporal ordering check (the exposure must precede the
+          outcome) and a non exposed comparison cohort.
+
+      - name: impact-trace
+        triggers:
+          - "trace everyone who"
+          - "affected by"
+          - "who bought X through Y"
+        operation: trace_cohort
+        note: >
+          Multi hop: campaign to order to line item to product. Requires a matched
+          control that holds campaign and category constant.
+
+    composition_requirement: >
+      MANDATORY. The graph selects cohorts and returns customer ids. Any measured
+      quantity for a cohort must be computed by passing those ids to get_metric as
+      the cohort parameter. A number computed inside traversal code or by hand is
+      not the governed metric.
+
+# ---------------------------------------------------------------------------
+# NEGATIVE ROUTING RULES. These prevent the most damaging misroutes.
+# ---------------------------------------------------------------------------
+
+negative_routing_rules:
+  - rule: relationships_alone_do_not_route_to_graph
+    statement: >
+      The presence of a relationship in a question does NOT make it a traversal
+      question. Aggregations over attributes stay with the metrics engine, even
+      when the attribute describes a relationship.
+    stays_with_metrics_engine:
+      - "how many customers were referred (a count over an attribute)"
+      - "revenue from referred customers (an aggregation with a filter)"
+      - "signups by acquisition channel, including the referral channel"
+      - "repeat rate for referred customers as a group"
+    routes_to_graph_only_if:
+      - "the depth is unknown or unbounded (referrals of referrals, chains, downstream)"
+      - "the question is about propagation or exposure through relationships"
+      - "the question traces an affected population across three or more entity hops"
+
+  - rule: never_recompute_a_governed_metric_outside_the_metrics_engine
+    statement: >
+      A cohort selected by any other access path must be measured by passing it
+      into the metrics engine as a cohort filter. A number computed inside
+      traversal code, retrieval code, or by hand is not the governed metric and
+      is not an acceptable answer even if it is arithmetically correct.
+
+  - rule: documents_do_not_supply_metric_values
+    statement: >
+      Retrieval answers questions about definitions, policies, plans, and
+      narrative. It does not supply metric VALUES when a governed metric covers
+      the concept.
+
+  - rule: absent_data_is_not_a_search_failure
+    statement: >
+      When a query matches a declared absent concept, the answer is the
+      authoritative decline, not more searching. Retrieval returning nothing for
+      "NPS" is not evidence that the search was bad.

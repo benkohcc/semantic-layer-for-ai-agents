@@ -1,0 +1,116 @@
+id: aov
+label: Average Order Value
+one_line: Net revenue divided by completed order count, excluding test and wholesale orders.
+
+definition:
+  description: >
+    Average net value of a marketing order. Uses the same order population and
+    the same exclusions as net_revenue, so the two are always consistent.
+  formula: "SUM(gross_amount - refund_amount) / COUNT(orders.id)"
+  source_table: orders
+  filters:
+    - "status = 'completed'"
+    - "channel != 'wholesale'"
+  filter_rationale: >
+    Wholesale baskets are several times larger than retail baskets. Leaving
+    wholesale in makes average order value meaningless as a retail figure.
+  additive: false
+  additive_note: >
+    A ratio. NEVER average monthly AOV values to get a quarterly AOV. Re derive
+    from summed revenue over summed order count for the whole period.
+  grain:
+    minimum: month
+    default: month
+  dimensions: [
+               month, channel, segment, category, region, product, 
+               product_id, racket_type, price_tier, brand, supplier, 
+               lifecycle_stage]
+  dimension_notes:
+    product: >
+      Product level grain. An order containing several products contributes to
+      each of their rows, so product values do not sum to the ungrouped total.
+    racket_type: >
+      power, control or balanced. Rackets only; every other category is NULL and
+      groups under a null row. Competitive players skew heavily to control frames
+      and recreational players to power frames, so this split is real and worth
+      reporting.
+    price_tier: >
+      entry, mid or premium, computed from where the price sits in its category's
+      band. Comparable within a category, not across categories.
+  available_filters:
+    brand: "Restricts to one brand."
+    lifecycle_stage: "Restricts to new, core, clearance or discontinued products."
+    product: "Restricts to one product by name."
+    product_id: "Restricts to one product by id."
+    racket_type: "Restricts to power, control or balanced rackets."
+    price_tier: "Restricts to entry, mid or premium products."
+    is_performance: >
+      1 restricts to performance rackets as the segmentation guide defines them
+      (100 square inches or smaller, above 150 dollars). This makes the guide's
+      own criterion computable.
+    recalled: "1 restricts to products under active recall."
+    channel: "Restricts to one order channel (web, email, paid_search, paid_social)."
+    segment: "Restricts to one customer segment (competitive, recreational)."
+    category: "Restricts to one product category."
+    region: "Restricts to one region."
+    acquisition_channel: "Restricts to customers acquired through one channel."
+    campaign_id: "Restricts to orders or sends attributed to one campaign id."
+
+evaluation:
+  direction: higher_better
+  benchmark_source: benchmarks.yaml
+  seasonal_pattern:
+    - "Rises modestly in spring as racket and shoe purchases mix in with strings."
+  direction_caveat: >
+    Higher is better only holding volume constant. AOV can rise because cheap
+    orders stopped happening, which is not good news. Read it with order count.
+
+framing:
+  required_caveats:
+    - >
+      Net of refunds, and excludes test and wholesale orders. Not comparable to a
+      gross AOV pulled from the raw orders table.
+  companions:
+    - net_revenue
+    - repeat_purchase_rate
+  companion_rationale: >
+    AOV alone cannot distinguish a healthier basket from a shrinking low end.
+    Revenue gives volume context; repeat rate shows whether higher value orders
+    are coming from returning customers.
+  when_not_to_use:
+    - "Do not use as a standalone health metric; it moves for opposite reasons."
+    - >
+      Do not use AOV to rank segment value. It measures the basket, not the
+      customer, and it ranks the two segments in the OPPOSITE order to lifetime
+      value. Use segment_ltv for value questions.
+  segment_note: >
+    COUNTER INTUITIVE AND IMPORTANT: the two segments have almost the SAME average
+    order value, even though competitive customers are worth roughly twice as much
+    over their lifetime. Competitive players buy small baskets often (strings are
+    43 percent of their orders); recreational players buy larger baskets rarely
+    (apparel is 44 percent of theirs). The two effects very nearly cancel.
+
+    So AOV is close to useless for ranking segment value here, and reading it as a
+    value signal would suggest the segments are equally valuable when one is worth
+    2.2 times the other. Value questions go to segment_ltv. Always.
+
+reliability:
+  min_sample: 100
+  coverage:
+    - dimension: category
+      value: services
+      limit: >
+        The services category runs under 30 orders a month across the entire
+        business, well below the reliability threshold of 100. Services AOV is a
+        real number computed on thin volume. Report it WITH the order count and
+        label it directional; do not present it as a stable figure.
+  definition_caveats:
+    - "a ratio, so it must be re derived per period and never averaged"
+    - "an order containing items from two categories contributes to both category slices, so category values do not reconcile to the ungrouped figure"
+  cannot_answer:
+    - "wholesale average order value (wholesale is excluded by definition)"
+    - "per item or per unit price (this is order level; use products for unit prices)"
+
+access:
+  path: metrics_engine
+  raw_sql_allowed: false

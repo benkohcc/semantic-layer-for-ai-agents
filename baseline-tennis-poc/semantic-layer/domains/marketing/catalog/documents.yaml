@@ -1,0 +1,534 @@
+# Document wrappers: what each document IS and when to use it.
+#
+# This file is DESCRIPTIVE. It carries titles, summaries, ownership, and guidance
+# on when a document is and is not the right source.
+#
+# It does NOT carry status. Which document is in force, what supersedes what, and
+# how precedence is decided all live in document_registry.yaml, separately and
+# deliberately: status changes on its own schedule as documents are replaced,
+# while a description stays true for the life of the document.
+#
+# The documents themselves say nothing about their own status either. That is the
+# point: a real superseded document reads exactly like a current one.
+
+asset_type: document
+
+documents:
+  - id: email-program-overview
+    file: email-program-overview.md
+    title: Email Program Overview
+    authority: canonical
+    effective_date: current
+    owner: Lifecycle Marketing
+    summary: >
+      Describes the three email streams (lifecycle, campaign, transactional), how
+      open rate is measured, and why machine opens and transactional mail are
+      excluded from reporting.
+    when_to_use:
+      - Questions about how email is measured or why the governed definition excludes things.
+      - Questions about email program structure or which streams exist.
+    when_not_to_use:
+      - For open rate or click rate VALUES. Use the governed metrics.
+    related_metrics: [email_open_rate, email_click_rate, revenue_per_email]
+
+  - id: refund-policy-2026
+    file: refund-policy-2026.md
+    title: Refund Policy
+    authority: canonical
+    effective_date: "2026-01-01"
+    supersedes: refund-policy-2024-draft
+    owner: Customer Operations
+    summary: >
+      Current refund policy in force. 45 day window on unused merchandise,
+      services non refundable once performed, full refunds at any time for
+      recalled products, refunds netted into marketing revenue when they post.
+    when_to_use:
+      - Any question about refunds, returns, return windows, or refund eligibility.
+    when_not_to_use:
+      - For the refund RATE. Use the governed refund_rate metric.
+    authority_note: >
+      THIS is the live policy. A 2024 draft exists in the index and was never
+      adopted. If the draft surfaces in retrieval, say it is superseded.
+    related_metrics: [refund_rate]
+
+  - id: refund-policy-2024
+    file: refund-policy-2024.md
+    title: Refund and Returns Policy (2024)
+    authority: superseded
+    effective_date: null
+    superseded_by: refund-policy-2026
+    adopted: false
+    summary: >
+      A refund policy with a 30 day window, a 15 percent racket restocking fee,
+      non refundable strings, and a 10 business day refund processing time.
+    when_to_use:
+      - Only to explain that this version exists and was never adopted.
+    when_not_to_use:
+      - NEVER as the answer to a refund policy question. The 30 day window and
+        the restocking fee were never in force. Quoting this document as current
+        policy is a factual error.
+    trap_note: >
+      THE AUTHORITY RANKING TEST, and it only works because the document gives no
+      clue. Nothing in the file says draft, says superseded, or hints that it was
+      never adopted. It reads as a complete, confident, internally consistent
+      policy, because that is what a draft policy looks like. The ONLY thing that
+      makes it identifiable as not-in-force is the document registry.
+
+  - id: competitor-landscape-2024
+    file: competitor-landscape-2024.md
+    title: Competitive Landscape (2024)
+    owner: Strategy
+    summary: >
+      The 2024 competitive review: specialist retailers, mass retailers, and an
+      assessment that direct from manufacturer was not a near term threat.
+    when_to_use:
+      - Only for what we believed about the competitive set in 2024.
+    when_not_to_use:
+      - >
+        As a current view. Its central judgement about direct from manufacturer
+        was wrong, and it predates the stringing capacity expansion that changed
+        our position. Nothing in the document says any of this.
+
+  - id: q2-media-plan
+    file: q2-media-plan.md
+    title: Q2 Media Plan
+    owner: Growth Marketing
+    summary: >
+      The previous quarter's media plan. Full weight paid search with NO pause,
+      reduced paid social, and spring league messaging through mid May.
+    when_to_use:
+      - Only when analysing Q2 specifically.
+    when_not_to_use:
+      - >
+        For anything in Q3. It documents a different budget posture and explicitly
+        no paid search pause, so citing it against a July signup drop would be
+        confidently wrong. It is the same template and tone as the current plan.
+    trap_note: >
+      A recurring document where only the newest issue is operative. Nothing
+      distinguishes the stale issue from the current one except the registry.
+
+  - id: q3-media-plan
+    file: q3-media-plan.md
+    title: Q3 Media Plan
+    authority: canonical
+    effective_date: current_quarter
+    owner: Growth Marketing
+    summary: >
+      Channel budget posture for the quarter. Documents a deliberate paid search
+      budget pause with specific dates, states the expected consequence (paid
+      search attributed signups fall roughly 40 percent), and confirms other
+      channels were held flat. Also declares the last touch attribution limit and
+      the paid social spend tracking start date.
+    when_to_use:
+      - Diagnosing any change in signups, acquisition, or paid channel performance.
+      - Questions about budget decisions or planned changes.
+      - Questions about what attribution the data supports.
+    when_not_to_use:
+      - For signup VALUES. Use the governed new_customer_signups metric.
+    diagnosis_note: >
+      This is the document that explains the planted signup drop. Check that its
+      pause dates overlap the period in question before citing it as a cause.
+    related_metrics: [new_customer_signups, cac]
+
+  - id: spring-campaign-recap
+    file: spring-campaign-recap.md
+    title: Spring League Kickoff Campaign Recap
+    authority: canonical
+    document_class: internal_recap_deck
+    effective_date: campaign_close
+    owner: Campaign Marketing
+    summary: >
+      Recap of the Spring League Kickoff campaign. Quotes a GROSS revenue figure
+      pulled from the orders export without exclusions or refund netting. Notes
+      the product mix and that a promoted string was later recalled.
+    when_to_use:
+      - Narrative about the campaign: what ran, product mix, timing, what worked.
+    when_not_to_use:
+      - For the campaign revenue NUMBER. This deck quotes gross over all rows and
+        was never restated. The governed net_revenue metric is authoritative.
+    conflict_note: >
+      CONFLICT TEST. This deck's revenue figure will disagree with the governed
+      metric, because it is gross and includes rows the metric excludes. Report
+      the governed net figure and NAME the discrepancy with its reason. Do not
+      average them and do not quietly ignore the deck.
+    related_metrics: [net_revenue]
+
+  - id: segmentation-guide
+    file: segmentation-guide.md
+    title: Customer Segmentation Guide
+    authority: canonical
+    effective_date: current
+    owner: Marketing Analytics
+    summary: >
+      Defines the competitive and recreational segments with explicit criteria:
+      two or more restrings in a trailing 12 months, or a performance racket
+      purchase (100 square inches or smaller above 150 dollars). Everyone else is
+      recreational.
+    when_to_use:
+      - Any question about what defines a segment or what the criteria are.
+      - Before interpreting a segment split, to explain why the segments differ.
+    when_not_to_use:
+      - For segment metric values. Use the governed metrics with the segment dimension.
+    note: >
+      Also states that segment must not be used for satisfaction or sentiment
+      inference, because no satisfaction data is collected.
+    related_metrics: [segment_ltv, aov, net_revenue]
+
+  - id: string-recall-notice
+    file: string-recall-notice.md
+    title: Product Recall Notice
+    authority: canonical
+    effective_date: recall_date
+    owner: Product Quality
+    summary: >
+      Recall notice for a string product with premature fraying. Names the
+      product, states the recall date, and describes remediation (full refund at
+      any time plus a free restring). Notes the product was promoted in the Spring
+      League Kickoff campaign.
+    when_to_use:
+      - Questions about the recall, the affected product, or remediation.
+      - Any analysis of customer behavior that spans the recall date.
+    when_not_to_use:
+      - For refund rate values. Use the governed metric.
+    analysis_note: >
+      Contains the reporting caveat that matters for cohort work: behavior after
+      the recall date is not ordinary campaign performance, and purchases made
+      BEFORE the recall date carry no exposure to it. Any divergence claim must
+      respect that boundary.
+    related_metrics: [refund_rate, repeat_purchase_rate]
+
+  - id: promo-calendar
+    file: promo-calendar.md
+    title: Promotional Calendar
+    authority: canonical
+    effective_date: current
+    owner: Campaign Marketing
+    summary: >
+      The annual promotional rhythm. Establishes that March through May is the
+      largest campaign window and that December is intentionally quiet with
+      reduced budget and send volume, so a December revenue dip is by design.
+    when_to_use:
+      - Any seasonality question.
+      - Diagnosing a move that might be seasonal, especially in December or spring.
+    seasonality_note: >
+      This is the document that resolves "did the December dip mean something is
+      wrong" to NO. It states the dip is deliberate.
+
+  - id: data-and-reporting-notes
+    file: data-and-reporting-notes.md
+    title: Data and Reporting Notes
+    authority: canonical
+    effective_date: current
+    owner: Marketing Analytics
+    summary: >
+      The known exclusions (test orders, wholesale orders) and why they matter,
+      the inferred churn definition, the last touch attribution limit, the
+      complete absence of satisfaction and NPS data, and the out of scope status
+      of forecasting.
+    when_to_use:
+      - Questions about data quality, exclusions, or known limitations.
+      - Any question that touches churn, attribution, satisfaction, or forecasting.
+    honesty_note: >
+      This document backs several honest declines. It states plainly that no
+      satisfaction, sentiment, or NPS data exists anywhere, that churn is inferred
+      rather than observed, and that this layer reports actuals and does not
+      forecast.
+
+  # ---- expanded corpus ----------------------------------------------------
+
+  - id: supplier-terms-and-lead-times
+    file: supplier-terms-and-lead-times.md
+    title: Supplier Terms and Lead Times
+    owner: Merchandising
+    summary: >
+      Vendor by vendor reference: lead time, payment terms, minimum order value,
+      relationship history, and what each vendor's terms mean for planning.
+    when_to_use:
+      - Questions about suppliers, vendors, lead times, payment terms or minimums.
+      - Explaining why a stockout in a given brand cannot be fixed this season.
+    when_not_to_use:
+      - For brand POSITIONING, which is in the Brand and Supplier Guide.
+      - For stock levels, which are per product data rather than vendor terms.
+
+  - id: brand-and-supplier-guide
+    file: brand-and-supplier-guide.md
+    title: Brand and Supplier Guide
+    authority: canonical
+    effective_date: current
+    owner: Merchandising
+    summary: >
+      What we stock and who makes it. Positioning for all seven brands, the margin
+      profile of each, supplier lead times and payment terms, and the assortment
+      rules that follow from them.
+    when_to_use:
+      - Questions about brands, what we carry, or why a brand is in the range.
+      - Questions about suppliers, lead times, or why stock arrives when it does.
+      - Interpreting a margin difference between brands.
+    when_not_to_use:
+      - For brand SALES or MARGIN figures. Use get_metric with the brand dimension.
+    related_metrics: [gross_margin, margin_rate, net_revenue]
+
+  - id: customer-personas
+    file: customer-personas.md
+    title: Customer Personas
+    authority: canonical
+    effective_date: current
+    owner: Marketing
+    summary: >
+      Four narrative personas (League Regular, Weekend Social Player, Returning
+      Player, Parent Buyer) with what each wants and what loses them.
+    when_to_use:
+      - Creative direction, message testing, deciding what a campaign should say.
+    when_not_to_use:
+      - >
+        For any NUMBER. Personas are not in the data and cannot be reported on.
+        Segment is the behavioral classification that is; do not confuse them.
+    note: >
+      The document itself states the distinction: persona is why someone buys,
+      segment is a computed classification. A brief naming both is doing it right.
+
+  - id: merchandising-playbook
+    file: merchandising-playbook.md
+    title: Merchandising Playbook
+    authority: canonical
+    effective_date: current
+    owner: Merchandising
+    summary: >
+      Assortment planning, the four lifecycle stages and what each means, stock
+      interpretation, promotion rules, and the blended margin target.
+    when_to_use:
+      - Questions about what to stock, promote or clear.
+      - Interpreting a lifecycle stage or a stock level.
+      - Understanding why a clearance period depresses margin rate.
+    analysis_note: >
+      Contains the correction for the most common margin misreading: the fifty
+      percent target is a BLEND, and performance brands running in the low forties
+      are performing as intended, not underperforming.
+    related_metrics: [margin_rate, gross_margin]
+
+  - id: competitive-landscape-2026
+    file: competitive-landscape-2026.md
+    title: Competitive Landscape
+    authority: canonical
+    effective_date: current_year
+    owner: Strategy
+    supersedes: competitor-landscape
+    summary: >
+      Qualitative view of the specialist retailers, mass retailers and direct from
+      manufacturer channels, where we win and lose.
+    when_to_use: [Qualitative positioning and competitor questions.]
+    when_not_to_use:
+      - >
+        For any competitor NUMBER. The document states plainly that we hold no
+        competitor pricing, no market share, and no competitor sales data.
+    honesty_note: >
+      Explicitly declares what cannot be answered about competitors, so a share or
+      competitor revenue question gets a named refusal rather than an estimate.
+
+  - id: pricing-and-discount-policy
+    file: pricing-and-discount-policy.md
+    title: Pricing and Discount Policy
+    authority: canonical
+    effective_date: current
+    owner: Merchandising and Finance
+    summary: >
+      How list price is set from category margin targets, discount authority
+      thresholds, and the standing rules on what may and may not be discounted.
+    when_to_use:
+      - Questions about pricing approach, discount limits, or approval routes.
+    related_metrics: [margin_rate, gross_margin]
+
+  - id: seasonal-planning-calendar
+    file: seasonal-planning-calendar.md
+    title: Seasonal Planning Calendar
+    authority: canonical
+    effective_date: current
+    owner: Marketing and Merchandising
+    summary: >
+      The operating rhythm of the year phase by phase, with the commitments each
+      requires and the lead times behind them.
+    when_to_use:
+      - Any seasonality question, and any planning or timing question.
+    seasonality_note: >
+      States that a December decline is by design and that diagnosing it as a
+      problem is the most common analytical error in this business.
+
+  - id: customer-service-themes
+    file: customer-service-themes.md
+    title: Customer Service Themes
+    authority: canonical
+    effective_date: current
+    owner: Customer Operations
+    document_class: qualitative_summary
+    summary: >
+      What customers contact the service team about, summarised qualitatively by
+      that team. Turnaround, shoe sizing, delivery timing, string durability.
+    when_to_use:
+      - Understanding what customers complain about, qualitatively.
+    when_not_to_use:
+      - >
+        As a satisfaction measure. It has NO DENOMINATOR and no survey behind it.
+        It describes what the queue felt like, not what share of customers felt
+        anything.
+    honesty_note: >
+      The nearest thing to voice-of-customer that exists here, and it is explicitly
+      opinion. A satisfaction NUMBER still does not exist and must still be
+      declined.
+
+  - id: inventory-health-notes
+    file: inventory-health-notes.md
+    title: Inventory Health Notes
+    authority: canonical
+    effective_date: current
+    owner: Merchandising
+    summary: >
+      How to read stock levels against lifecycle stage, current pressure points
+      from long lead time vendors, and what stock data cannot tell you.
+    when_to_use:
+      - Questions about stock, availability, or whether a stockout matters.
+    when_not_to_use:
+      - >
+        For stock HISTORY. Only the current level is held; there is no movement log,
+        so "how long has this been out of stock" is unanswerable.
+
+  - id: stringing-sla-2026
+    file: stringing-sla-2026.md
+    title: Stringing Service Level Agreement (2026)
+    authority: canonical
+    effective_date: "2026-01-01"
+    supersedes: stringing-sla-2025
+    owner: Service Operations
+    summary: >
+      Current service commitments: two business day turnaround, same day in all
+      regions, plus or minus one pound tension, seven day failure remedy.
+    when_to_use:
+      - Any question about current stringing turnaround or service commitments.
+    authority_note: >
+      THIS is the live SLA. The 2025 version is also canonical FOR ITS OWN PERIOD
+      and is superseded now. Both are legitimate documents, which makes this a
+      harder ranking case than canonical versus draft: the discriminator is the
+      effective date, not the authority level.
+
+  - id: stringing-sla-2025
+    file: stringing-sla-2025.md
+    title: Stringing Service Level Agreement (2025)
+    authority: superseded
+    effective_date: "2025-01-01"
+    superseded_by: stringing-sla-2026
+    owner: Service Operations
+    summary: >
+      The 2025 commitments: three business day turnaround, same day in northeast
+      and west only, plus or minus two pounds, five day failure remedy.
+    when_to_use:
+      - Only when discussing 2025 service performance against its own commitments.
+    when_not_to_use:
+      - >
+        NEVER as current policy. Every number in it was tightened for 2026, so
+        quoting it to a customer states a worse service than we now offer.
+    trap_note: >
+      RETRIEVAL TRAP. Unlike the 2024 refund draft, this document was genuinely in
+      force once, so dismissing it as "never adopted" is wrong. It is correct for
+      its period and superseded for today, and the answer has to say which.
+
+  - id: transactional-email-operations
+    file: transactional-email-operations.md
+    title: Transactional Email Operations
+    authority: canonical
+    effective_date: current
+    owner: Engineering
+    summary: >
+      Operational email only: order confirmations, shipping notices, receipts.
+      Separate subdomain, separate IP pool, separate escalation path.
+    when_to_use:
+      - Questions specifically about transactional or operational email.
+    when_not_to_use:
+      - >
+        For MARKETING email performance. The engagement numbers here run far higher
+        because people open receipts, and mixing them into marketing reporting is
+        exactly what the governed metrics exclude.
+    trap_note: >
+      RETRIEVAL TRAP. A search for "email performance" or "open rate" will surface
+      this document, and its forty percent open rate looks like a great answer to a
+      marketing question. It is the wrong system entirely.
+
+  - id: stringing-operations-manual
+    file: stringing-operations-manual.md
+    title: Stringing Operations Manual
+    authority: canonical
+    effective_date: current
+    owner: Service Operations
+    document_class: long_reference
+    summary: >
+      The complete stringing operation across ten sections: capacity, intake,
+      string selection, tension standards, turnaround, quality control, warranty,
+      equipment, and the reporting caveat on services volume.
+    when_to_use:
+      - Detailed operational questions about the stringing service.
+      - Tension standards, including the junior frame default.
+    when_not_to_use:
+      - >
+        For current turnaround commitments. The manual deliberately does not
+        restate them and points at the SLA, which changes more often.
+    trap_note: >
+      RETRIEVAL TRAP, within document. This is the longest document in the corpus
+      and splits across several chunks. Specific answers, such as the junior frame
+      tension of forty eight pounds, sit in one buried subsection surrounded by
+      unrelated material. Finding the right DOCUMENT is not enough here.
+
+  - id: brand-voice
+    file: brand-voice.md
+    title: Brand Voice Guide
+    authority: canonical
+    effective_date: current
+    summary: Tone and copy guidelines for marketing communications.
+    when_to_use: [Questions about tone, voice, or copy standards.]
+
+  - id: stringing-service-faq
+    file: stringing-service-faq.md
+    title: Stringing Service FAQ
+    authority: canonical
+    effective_date: current
+    summary: >
+      Customer facing answers about stringing turnaround, tension, pricing, and
+      refundability. Notes that services are a small share of total orders and
+      that category level services reporting is thin.
+    when_to_use: [Questions about the stringing service or service policy.]
+    note: >
+      Corroborates the thin volume warning on services category metrics.
+
+  - id: loyalty-program-terms
+    file: loyalty-program-terms.md
+    title: Loyalty Program Terms
+    authority: canonical
+    effective_date: current
+    summary: >
+      Points earning and redemption, expiry, and referral credit rules. States
+      that referral credit requires a member link or code, so uncoded word of
+      mouth referrals are not captured, and that self referral is blocked.
+    when_to_use:
+      - Questions about loyalty points or referral credit.
+      - Understanding what the referral data can and cannot see.
+    note: >
+      Explains a real limitation of the referral graph: absence of a referral
+      link means uncaptured or organic, not absence of a relationship.
+
+  - id: shipping-and-fulfillment
+    file: shipping-and-fulfillment.md
+    title: Shipping and Fulfillment
+    authority: canonical
+    effective_date: current
+    summary: Shipping speeds, free return shipping threshold, and domestic only scope.
+    when_to_use: [Questions about shipping or fulfillment timing.]
+
+
+  - id: email-deliverability-runbook
+    file: email-deliverability-runbook.md
+    title: Email Deliverability Runbook
+    authority: canonical
+    effective_date: current
+    owner: Lifecycle Marketing
+    summary: >
+      Delivered rate thresholds and escalation steps. Notes that a rise in raw
+      open rate is not evidence of improved deliverability, because privacy proxy
+      opens move independently of human engagement.
+    when_to_use: [Deliverability questions, or explaining why open rate is directional.]

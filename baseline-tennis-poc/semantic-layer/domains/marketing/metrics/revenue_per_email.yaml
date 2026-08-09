@@ -1,0 +1,80 @@
+id: revenue_per_email
+label: Revenue Per Email Delivered
+one_line: Net revenue from the email channel divided by marketing emails delivered.
+
+definition:
+  description: >
+    Net revenue attributed to the email channel per marketing message delivered.
+    The efficiency measure for the email program: it exposes the tradeoff between
+    sending more and sending better.
+  formula: "SUM(net revenue on email channel orders) / SUM(delivered marketing emails)"
+  source_table: orders joined to email_sends by period
+  filters:
+    - "orders: status = 'completed' AND channel = 'email'"
+    - "email_sends: delivered = 1 AND email_type != 'transactional'"
+  additive: false
+  additive_note: >
+    STRICTLY non additive, and the most commonly mishandled metric here. To get a
+    quarterly figure, sum email revenue for the quarter and sum delivered for the
+    quarter, then divide. Averaging three monthly values gives a different and
+    wrong answer, because months have different send volumes.
+  grain:
+    minimum: month
+    default: month
+  # Month only, and no filters. The numerator (email channel revenue) and the
+  # denominator (delivered marketing sends) live in different tables and are
+  # aligned on month, so any narrower slice would have to be applied to both
+  # halves consistently. Applied to one side only it produces filtered revenue
+  # over unfiltered sends, which is a meaningless ratio. For engagement splits by
+  # segment or campaign, use email_click_rate, which has one source table.
+  dimensions: [month]
+  available_filters: {}
+  available_filters_note: >
+    This metric accepts no filters, by design. Requests carrying one are rejected
+    rather than silently answered unfiltered. Use email_click_rate for segment or
+    campaign splits.
+
+evaluation:
+  direction: higher_better
+  benchmark_source: benchmarks.yaml
+  seasonal_pattern:
+    - "Peaks in spring league season when both send volume and conversion rise."
+    - "Falls in December as volume is cut and offers soften."
+  direction_caveat: >
+    Higher is better, but this metric rises when send volume falls even if
+    revenue is flat, because the denominator shrank. Always read it with total
+    delivered volume and total email revenue, or a shrinking program will look
+    like an improving one.
+
+framing:
+  required_caveats:
+    - >
+      Non additive. This figure is re derived for the requested period; it is not
+      an average of monthly values.
+    - >
+      Email channel revenue is LAST TOUCH attributed. Revenue credited here had
+      email as the final touch, which is not the same as revenue email caused.
+  companions:
+    - email_click_rate
+    - net_revenue
+  companion_rationale: >
+    Click rate shows whether engagement drove the change; email channel revenue
+    and delivered volume show whether the numerator or the denominator moved.
+  when_not_to_use:
+    - "Do not use to justify cutting send volume; the metric mechanically improves when volume drops."
+    - "Do not treat as email program incrementality; it is a last touch ratio."
+
+reliability:
+  min_sample: 100
+  coverage: []
+  definition_caveats:
+    - "non additive; averaging period values produces a wrong number"
+    - "the numerator is last touch email attributed revenue, not incremental revenue caused by email"
+    - "numerator and denominator come from different tables joined on period, so a send late in a month can convert in the next"
+  cannot_answer:
+    - "incremental revenue caused by the email program (requires an experiment; attribution is last touch)"
+    - "revenue per individual recipient or per campaign send when a customer received several messages"
+
+access:
+  path: metrics_engine
+  raw_sql_allowed: false

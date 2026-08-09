@@ -1,0 +1,125 @@
+# Graph edge descriptors (milestone 2).
+#
+# Edges are catalog assets like any other. They get semantics, limitations, and
+# when_to_use / when_not_to_use, because "what does this relationship mean" is
+# exactly as ambiguous as "what does this column mean" and just as damaging when
+# guessed at.
+
+asset_type: graph_edge
+
+edges:
+  - id: referred_by
+    label: Referral edge (referrer -> referee)
+    source_column: customers.referred_by
+    directionality: >
+      DIRECTED, referrer to referee. The edge points from the customer who made
+      the referral to the customer who was referred, so influence flows ALONG the
+      edge direction. Reversing it inverts the causal reading.
+    cardinality: >
+      One referee has at most one referrer. One referrer can have many referees,
+      so the structure is a forest of trees, not a general graph.
+    summary: >
+      Records that one customer brought another in through a referral link or
+      code. Chains reach up to depth 5 in this data.
+    semantics:
+      edge_present: >
+        The referee signed up using the referrer's link or code, and the referrer
+        earned referral credit for it.
+      edge_absent: >
+        A NULL referred_by means the signup WAS NOT ATTRIBUTED TO A REFERRAL. It
+        does NOT mean the customer has no relationships and does not mean they
+        arrived with no social influence. Word of mouth referrals made without a
+        link or code are completely invisible here, so absence of an edge is
+        absence of CAPTURE, not absence of a relationship.
+      depth_meaning: >
+        Depth is counted from the chain ROOT, the customer who was not themselves
+        referred. Depth 1 is a direct referee of a root. A chain of depth 3 means
+        someone referred someone who referred someone.
+      root_channel_meaning: >
+        A referred customer's own acquisition_channel is always 'referral'. To ask
+        which channel SEEDED a chain you must attribute the chain to its ROOT's
+        acquisition channel, which is what chain_stats does.
+    known_limitations:
+      - >
+        Referral capture began at store launch, so referrals that happened before
+        the tracking existed are absent entirely.
+      - >
+        Only coded referrals are captured. Uncoded word of mouth is invisible, so
+        the graph systematically UNDERCOUNTS real referral influence.
+      - >
+        Self referral is blocked at signup, so a self loop can never appear.
+      - >
+        The referral is dated by the referee's signup date. There is no separate
+        referral timestamp, so a referral cannot be dated more precisely than the
+        signup it produced.
+    when_to_use:
+      - Chains of unknown or unbounded depth: referrals of referrals, downstream networks.
+      - Propagation or exposure questions: is a customer at risk because of who referred them.
+      - Attributing chain depth or chain size back to the channel that seeded it.
+    when_not_to_use:
+      - >
+        COUNTING referrals is a METRIC question when the depth is 1. "How many
+        customers were referred" is a count over an attribute; use get_metric with
+        new_customer_signups and the referral acquisition channel. Use the graph
+        ONLY for chains.
+      - >
+        "Revenue from referred customers" is an aggregation with a filter, not a
+        traversal. Use get_metric.
+      - >
+        Do not use the graph to compute a rate. Select the cohort here, then pass
+        the ids to get_metric.
+    causality_note: >
+      Direction of the edge is not direction of causation. That a referrer churned
+      before their referee did says nothing on its own about why. Temporal
+      ordering is necessary evidence, never sufficient, and exposed_cohort returns
+      the ordering check so the claim can be qualified honestly.
+
+  - id: purchased
+    label: Purchase edge (customer -> product, via order)
+    source_columns: [orders.customer_id, order_items.product_id]
+    directionality: >
+      DIRECTED, customer to product, mediated by an order. An order is the edge
+      payload: it carries the date, the channel, the campaign attribution, and the
+      status.
+    summary: >
+      Records that a customer bought a product, through a specific order that may
+      carry a campaign attribution. Used to trace a campaign through to the
+      customers who bought a particular product.
+    semantics:
+      edge_present: >
+        A completed non wholesale order containing that product. Test and
+        wholesale orders are excluded from traversal for the same reason they are
+        excluded from every metric.
+      edge_absent: >
+        No recorded purchase of that product by that customer. This includes
+        purchases made through channels not captured here, so it means "not
+        recorded", not "definitely never bought".
+      campaign_attribution: >
+        LAST TOUCH. An order attributed to a campaign had that campaign as the
+        final touch, which is not the same as the campaign having caused the
+        purchase. Traced cohorts inherit this limitation.
+      multi_hop_path: >
+        The traversal campaign -> order -> order_items -> product is three hops.
+        A single aggregation cannot express it, which is what makes trace_cohort a
+        traversal operation rather than a filter.
+    known_limitations:
+      - >
+        Attribution is last touch, so a traced cohort is "customers whose final
+        touch was this campaign and who bought this product", not "customers the
+        campaign caused to buy this product".
+      - >
+        An order containing several products produces several edges, so a customer
+        can appear in more than one product cohort from a single order.
+      - >
+        Purchases before the recall date carry no exposure to the recall. Any
+        cohort spanning the recall date mixes exposed and unexposed behavior.
+    when_to_use:
+      - Tracing an affected population from a campaign through to a specific product.
+      - Building an exposure cohort for a product level event such as a recall.
+    when_not_to_use:
+      - >
+        Product or category revenue, order counts, and AOV are metric questions.
+        Use get_metric with the category dimension.
+      - >
+        Do not compute a repeat rate or any other measured quantity here. Select
+        the cohort, then use get_metric with the cohort parameter.

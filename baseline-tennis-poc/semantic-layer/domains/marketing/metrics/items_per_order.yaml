@@ -1,0 +1,60 @@
+# Added as CONTENT ONLY, via the declarative `sql` block.
+id: items_per_order
+label: Items Per Order
+one_line: Average number of line items per completed marketing order.
+
+definition:
+  description: >
+    Average basket depth: line items divided by orders, over completed non
+    wholesale orders. Distinguishes a bigger basket from a more expensive one,
+    which AOV alone cannot do.
+  formula: "COUNT(order_items) / COUNT(DISTINCT orders.id)"
+  source_table: orders joined to order_items
+  filters:
+    - "status = 'completed'"
+    - "channel != 'wholesale'"
+  additive: false
+  additive_note: "A ratio. Re derive per period; never average period values."
+  grain:
+    minimum: month
+    default: month
+  dimensions: [month, channel, segment, region]
+  available_filters:
+    channel: "Restricts to one order channel."
+    segment: "Restricts to one customer segment."
+    region: "Restricts to one region."
+
+# No declarative sql block: this metric needs a JOIN between orders and
+# order_items with two different grains in numerator and denominator, which the
+# declarative form cannot express. It has a compiler branch in metrics_engine.py
+# alongside the other cross-table ratios.
+
+evaluation:
+  direction: higher_better
+  benchmark_source: benchmarks.yaml
+  direction_caveat: >
+    Higher is better only if it reflects genuine cross-sell. It also rises when
+    single item orders stop happening, which is not good news.
+
+framing:
+  required_caveats:
+    - "Counts line items, not units; quantity per line is not reflected."
+  companions: [aov, order_count]
+  companion_rationale: >
+    Items per order plus AOV tells you whether a basket grew by adding products
+    or by trading up to pricier ones.
+  when_not_to_use:
+    - "Do not use to measure cross-sell success without a before and after period."
+
+reliability:
+  min_sample: 100
+  coverage: []
+  definition_caveats:
+    - "line items, not units sold"
+    - "a ratio, so it must be re derived per period"
+  cannot_answer:
+    - "units sold (quantity is recorded per line but not aggregated by this metric)"
+
+access:
+  path: metrics_engine
+  raw_sql_allowed: false

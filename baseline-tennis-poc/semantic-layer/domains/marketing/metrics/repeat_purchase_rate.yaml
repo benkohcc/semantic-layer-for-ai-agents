@@ -1,0 +1,87 @@
+id: repeat_purchase_rate
+label: Repeat Purchase Rate
+one_line: Share of active customers with two or more completed orders in the trailing 12 months.
+
+definition:
+  description: >
+    Of the customers who ordered at all in the trailing 12 months, the share who
+    ordered more than once. The denominator is ACTIVE customers, not all
+    customers, so a growing inactive base does not depress the rate.
+  formula: "COUNT(customers with >= 2 completed orders in trailing 12m) / COUNT(customers with >= 1)"
+  source_table: orders
+  window: trailing 12 months from the end of the requested period
+  filters:
+    - "status = 'completed'"
+    - "channel != 'wholesale'"
+  additive: false
+  additive_note: >
+    A rate over a rolling window. Never average across periods, and never sum.
+    Re derive for each period end.
+  grain:
+    minimum: month
+    default: month
+  dimensions: [month, segment, region, acquisition_channel]
+  available_filters:
+    segment: "Restricts to one customer segment (competitive, recreational)."
+    region: "Restricts to one region."
+    acquisition_channel: "Restricts to customers acquired through one channel."
+  available_filters_note: >
+    Filters narrow the population BEFORE the trailing 12 month window is
+    applied. For an arbitrary cohort use the cohort parameter instead.
+  cohort_filter_supported: true
+  cohort_note: >
+    Accepts an explicit list of customer ids so a cohort selected elsewhere (for
+    example by graph traversal) can be measured through the governed definition.
+    This is the ONLY sanctioned way to compute a repeat rate for a cohort. A
+    repeat rate recomputed inside traversal code is not this metric.
+
+evaluation:
+  direction: higher_better
+  benchmark_source: benchmarks.yaml
+  seasonal_pattern:
+    - >
+      Relatively stable because the window is a trailing 12 months, which absorbs
+      seasonality by construction. Sharp moves are worth investigating.
+  cohort_comparison_guidance: >
+    When comparing a cohort against a baseline, compare against a matched or non
+    exposed cohort measured the same way, NOT against the overall benchmark band.
+    The band is computed on the whole active base and any narrow cohort will
+    differ from it for reasons that have nothing to do with the hypothesis.
+
+framing:
+  required_caveats:
+    - >
+      The denominator is customers active in the trailing 12 months, not the full
+      customer base. This is a repeat rate among buyers, not a retention rate.
+    - >
+      This metric is churn adjacent. Churn in this business is INFERRED from
+      purchase silence, never observed, because there is no cancellation event.
+  companions:
+    - segment_ltv
+    - aov
+  companion_rationale: >
+    Repeat rate says how often customers come back; LTV says whether that is
+    worth anything. A segment can repeat frequently at low value.
+  when_not_to_use:
+    - "Do not read as a satisfaction measure. Repurchase is behavior, not sentiment, and no satisfaction data exists in this business."
+    - "Do not use on cohorts below the minimum sample without disclosing the sample size."
+    - "Do not use to claim causality when comparing cohorts; these are observational comparisons."
+
+reliability:
+  min_sample: 100
+  coverage: []
+  definition_caveats:
+    - "churn is inferred (no completed order in trailing 12 months), not observed; there is no cancellation event in retail"
+    - "a customer who simply had no need in the window counts as non repeating, which is indistinguishable here from dissatisfaction"
+    - "the trailing window means a cohort measured today and the same cohort measured next month are not the same measurement"
+  cannot_answer:
+    - "customer satisfaction or sentiment (no satisfaction data is collected anywhere in this business)"
+    - "why a customer stopped buying (the data records purchases, not reasons)"
+    - "observed churn or cancellation events (none exist; churn here is an inference)"
+
+access:
+  path: metrics_engine
+  raw_sql_allowed: false
+  cohort_composition: >
+    Graph selected cohorts flow in through the cohort parameter. The metric is
+    always computed here, never in the caller.

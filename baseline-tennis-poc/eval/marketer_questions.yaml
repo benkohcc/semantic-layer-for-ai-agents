@@ -1,0 +1,329 @@
+# A robust set of questions a marketer at Baseline Tennis Co. would actually ask.
+#
+# Written BEFORE deciding what data or access paths to add, so the additions are
+# driven by real information needs rather than by what happened to be easy.
+#
+# support:
+#   supported          the layer answers this today
+#   needs_metric       the data exists; a metric descriptor is missing (content)
+#   needs_attribute    the DATA is missing; seed.py must generate it
+#   needs_access_path  data exists but no registered path reaches it (code + content)
+#   must_decline       correctly unanswerable; the layer must say so and say why
+#
+# The point of the 'must_decline' rows is that a targeting question the layer
+# cannot answer must produce a named refusal, not a plausible guess. Today several
+# of these fall through silently, which is the worst outcome.
+
+categories:
+
+  # ===================================================================
+  - name: Performance reporting
+    note: The bread and butter. Already well covered.
+    questions:
+      - q: "What was revenue last month?"
+        support: supported
+      - q: "How is revenue trending over the last year?"
+        support: supported
+      - q: "Revenue by channel last quarter?"
+        support: supported
+      - q: "What is our average order value, by segment?"
+        support: supported
+      - q: "How many new customers did we get last month, by channel?"
+        support: supported
+      - q: "What is our refund rate by category?"
+        support: supported
+      - q: "How did email open and click rates do last month?"
+        support: supported
+      - q: "What is CAC by channel, and which is cheapest?"
+        support: supported
+      - q: "Is our repeat purchase rate healthy?"
+        support: supported
+      - q: "Which segment is worth more long term?"
+        support: supported
+      - q: "How many orders did we take last month?"
+        support: needs_metric
+        add: order_count
+      - q: "How many customers do we have in total?"
+        support: needs_metric
+        add: total_customers
+      - q: "What is our gross revenue, the way finance reports it?"
+        support: needs_metric
+        add: gross_revenue
+        note: >
+          The layer talks about gross versus net constantly but cannot compute
+          gross, which makes the conflict story hard to demonstrate concretely.
+      - q: "What is the average number of items per order?"
+        support: needs_metric
+        add: items_per_order
+      - q: "What is our unsubscribe rate?"
+        support: must_decline
+        reason: No unsubscribe event is recorded in email_sends.
+      - q: "What is our conversion rate from visit to order?"
+        support: must_decline
+        reason: No site visit or session data exists; only orders.
+
+  # ===================================================================
+  - name: Diagnosis
+    note: Why did something move. Covered by the diagnosis playbook.
+    questions:
+      - q: "Why did new customer signups drop last month?"
+        support: supported
+      - q: "Did the December revenue dip mean something is wrong?"
+        support: supported
+      - q: "Why is our refund rate up in strings?"
+        support: supported
+        note: refund_rate by category plus the recall notice.
+      - q: "Is our email program getting worse, or is it just seasonality?"
+        support: supported
+      - q: "Did the recall hurt us beyond the refunds?"
+        support: supported
+        note: Needs the graph path for the affected cohort's repeat rate.
+
+  # ===================================================================
+  - name: Product performance
+    note: >
+      THE BIG GAP. Every metric stops at category. A marketer works at the
+      product level constantly and cannot get there at all today.
+    questions:
+      - q: "Which rackets sell best?"
+        support: needs_access_path
+        add: product dimension on revenue and order count
+      - q: "Which products are our top sellers overall?"
+        support: needs_access_path
+        add: product dimension
+      - q: "Which rackets do competitive players prefer?"
+        support: needs_access_path
+        add: product dimension plus segment filter
+      - q: "What is the revenue for the SpinTech 17 string?"
+        support: needs_access_path
+        add: product dimension or product_id filter
+      - q: "Which products have the worst refund rate?"
+        support: needs_access_path
+        add: product dimension on refund_rate
+      - q: "Are premium rackets selling better than entry level ones?"
+        support: needs_attribute
+        add: products.price_tier
+      - q: "Do competitive players prefer control rackets or power rackets?"
+        support: needs_attribute
+        add: products.racket_type (power / control / balanced)
+        note: >
+          "Power racket" is currently a substring of a product NAME. Nothing
+          machine readable distinguishes a power frame from a control frame.
+      - q: "Which head size sells best to competitive players?"
+        support: needs_attribute
+        add: products.head_size_sq_in
+        note: >
+          The segmentation guide defines a performance racket as 100 sq in or
+          smaller above 150 dollars. That criterion is UNCOMPUTABLE today,
+          because head size is not in the data. The layer's own definition
+          cannot be verified against its own warehouse.
+
+  # ===================================================================
+  - name: Cross-sell and affinity
+    note: >
+      Co-purchase reasoning. The data supports it (racket buyers buy apparel
+      79 percent of the time and strings 77 percent) but no path reaches it.
+    questions:
+      - q: "What do racket buyers also buy?"
+        support: needs_access_path
+        add: affinity operation
+      - q: "What should we cross-sell to someone who just bought a racket?"
+        support: needs_access_path
+        add: affinity operation
+      - q: "Which categories pair best with shoes?"
+        support: needs_access_path
+        add: affinity operation
+      - q: "What is the cross-sell opportunity for the competitive archetype?"
+        support: needs_access_path
+        add: affinity operation with a segment filter
+      - q: "Do string buyers come back more often than apparel buyers?"
+        support: needs_access_path
+        add: product/category cohort plus governed repeat rate
+        note: "Composition pattern: cohort selection then get_metric."
+
+  # ===================================================================
+  - name: Audience building and targeting
+    note: >
+      The most operationally valuable questions and the least supported. A
+      marketer asks these to DO something, not to know something.
+    questions:
+      - q: "I have a new power racket coming in. Who should I send a promotion to?"
+        support: needs_access_path
+        add: audience operation
+        note: >
+          The data can identify this: competitive players who bought a racket
+          more than 12 months ago and are still active. Roughly 959 customers.
+      - q: "Who is due for a restring?"
+        support: needs_access_path
+        add: audience operation on last string purchase date
+      - q: "Which customers are at risk of churning?"
+        support: needs_access_path
+        add: audience operation on the inferred churn definition
+        note: Must disclose that churn is inferred, not observed.
+      - q: "Who bought the recalled string and needs contacting?"
+        support: supported
+        note: trace_cohort already does exactly this.
+      - q: "Build me an audience of high value customers in the west."
+        support: needs_access_path
+        add: audience operation with segment and region filters
+      - q: "Who has never bought shoes but buys everything else?"
+        support: needs_access_path
+        add: audience operation with a category exclusion
+      - q: "Which lapsed customers are worth a win-back offer?"
+        support: needs_access_path
+        add: audience operation plus segment_ltv
+      - q: "Give me the email addresses for that audience."
+        support: must_decline
+        reason: >
+          No PII is in this warehouse by design. The layer returns customer ids
+          and counts, never contact details. It must say so rather than
+          fabricate or attempt an export.
+
+  # ===================================================================
+  - name: Campaign planning
+    questions:
+      - q: "How much revenue did the spring campaign drive?"
+        support: supported
+      - q: "Which campaign performed best last year?"
+        support: supported
+        note: net_revenue by campaign dimension.
+      - q: "When should I launch a racket promotion?"
+        support: supported
+        note: Promo calendar plus seasonality notes.
+      - q: "What is the best channel for reaching recreational players?"
+        support: supported
+        note: CAC by channel plus signups by segment.
+      - q: "How big is the audience I can email?"
+        support: needs_metric
+        add: total_customers, or an audience count.
+
+
+  # ===================================================================
+  - name: Brand, margin and inventory
+    note: >
+      These fell through UNDECLARED in the first audit. The tempting fix was to
+      declare them as gaps, which would have been honest and wrong: a retailer
+      knows its brands, its costs and its stock. The right fix was to put the data
+      in, so the questions are answered rather than refused.
+    questions:
+      - q: "Which brands sell best?"
+        support: supported
+        note: brand dimension on order_count and net_revenue.
+      - q: "Which brands do competitive players prefer?"
+        support: supported
+        note: >
+          Performance brands take 79 percent of competitive orders against 28
+          percent of recreational ones, so the split is real.
+      - q: "What is our margin on rackets?"
+        support: supported
+        note: gross_margin and margin_rate, filtered to the rackets category.
+      - q: "Which brand is most profitable?"
+        support: supported
+        note: >
+          margin_rate by brand. Own label leads on rate; read it with volume before
+          acting, which the descriptor says explicitly.
+      - q: "What is our blended gross margin?"
+        support: supported
+      - q: "Are premium products more profitable than entry level?"
+        support: supported
+        note: margin_rate by price_tier.
+      - q: "Who supplies our shoes, and what are the lead times?"
+        support: supported
+        note: Brand and Supplier Guide, plus the suppliers table.
+      - q: "Are we out of stock on anything?"
+        support: supported
+        note: >
+          stock_level per product, read against lifecycle_stage. The Inventory
+          Health Notes explain why a clearance line at zero is a success.
+      - q: "Which products are new this season?"
+        support: supported
+        note: lifecycle_stage dimension.
+      - q: "How long has this line been out of stock?"
+        support: must_decline
+        reason: >
+          Only the CURRENT stock level is held. There is no movement log and no
+          reorder history, so duration and frequency of stockouts are unanswerable.
+      - q: "What is our net profit?"
+        support: must_decline
+        reason: >
+          Gross margin covers product cost only. No operating cost, shipping, fees
+          or labour data exists, so profit cannot be computed and gross margin must
+          not be presented as though it were profit.
+
+  # ===================================================================
+  - name: Qualitative and reference
+    note: >
+      Questions answered from documents rather than metrics. The original corpus
+      was 15 short documents and returned confident nonsense for most of these,
+      because with nothing relevant in the index something is always the nearest
+      neighbour.
+    questions:
+      - q: "What brands do we carry and why?"
+        support: supported
+      - q: "Who are our customer personas?"
+        support: supported
+        note: >
+          Personas are narrative and NOT in the data. The document says so, and no
+          number may be reported by persona.
+      - q: "How do we decide what to stock?"
+        support: supported
+      - q: "What is our pricing and discount policy?"
+        support: supported
+      - q: "What do customers complain about?"
+        support: supported
+        note: >
+          Qualitative service themes with no denominator. Explicitly not a
+          satisfaction measure, which still does not exist.
+      - q: "What is our stringing turnaround?"
+        support: supported
+        note: >
+          RETRIEVAL TRAP. Two SLAs exist and BOTH were canonical for their own
+          period, so the discriminator is the effective date rather than the
+          authority level.
+      - q: "What tension do we string a junior frame at?"
+        support: supported
+        note: >
+          RETRIEVAL TRAP, within document. The answer is one buried subsection of a
+          long operations manual, so finding the right document is not enough.
+      - q: "How do we position against the specialist retailers?"
+        support: supported
+      - q: "What is our market share?"
+        support: must_decline
+        reason: No competitor or market data of any kind exists.
+
+  # ===================================================================
+  - name: Correctly unanswerable
+    note: >
+      These must produce a NAMED decline. Several fall through silently today,
+      which is worse than either answering or refusing.
+    questions:
+      - q: "What is our NPS?"
+        support: must_decline
+        reason: No satisfaction data of any kind.
+      - q: "What will revenue be next quarter?"
+        support: must_decline
+        reason: Forecasting is out of scope.
+      - q: "What was CAC on paid social two years ago?"
+        support: supported
+        note: >
+          NOT a decline: this is behaviour 2, a partial answer with a stated
+          boundary. The cac descriptor declares the coverage hole, so the
+          metric returns the covered periods and the confidence block names
+          the boundary and forbids extrapolating across it. Classified as
+          must_decline at first, which was wrong: refusing a question the
+          layer answers honestly is its own failure mode.
+      - q: "Which ad creative performed best?"
+        support: must_decline
+        reason: No creative or ad level data; ad_spend is channel level only.
+      - q: "What is our market share in the racket category?"
+        support: must_decline
+        reason: No competitor or market data.
+      - q: "Which customers are most likely to buy a racket next month?"
+        support: must_decline
+        reason: >
+          A propensity PREDICTION. The layer reports actuals and does not score
+          or rank customers by predicted behavior. An audience built from past
+          behavior is available and is not the same thing; offer that instead.
+      - q: "How much should I bid on this keyword?"
+        support: must_decline
+        reason: No keyword level data exists.

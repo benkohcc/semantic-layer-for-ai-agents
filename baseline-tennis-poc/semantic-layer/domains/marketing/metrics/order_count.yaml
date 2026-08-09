@@ -1,0 +1,89 @@
+# Added as CONTENT ONLY. The declarative `sql` block below is the entire
+# implementation; no Python was written for this metric.
+id: order_count
+label: Order Count
+one_line: Number of completed marketing orders, excluding test and wholesale rows.
+
+definition:
+  description: >
+    Count of completed non wholesale orders. The volume companion to net_revenue:
+    revenue can move because baskets got bigger or because more people ordered,
+    and this is how you tell those apart.
+  formula: "COUNT(DISTINCT orders.id)"
+  source_table: orders
+  filters:
+    - "status = 'completed'"
+    - "channel != 'wholesale'"
+  filter_rationale: >
+    Same exclusions as every order based metric. Test rows are QA artifacts and
+    wholesale is a separate business line.
+  additive: true
+  additive_note: "A count. Safe to sum across periods and dimension values."
+  grain:
+    minimum: day
+    default: month
+  dimensions: [
+               month, channel, segment, category, region, campaign, product, 
+               product_id, racket_type, price_tier, brand, supplier, 
+               lifecycle_stage]
+  available_filters:
+    brand: "Restricts to one brand."
+    lifecycle_stage: "Restricts to new, core, clearance or discontinued products."
+    acquisition_channel: >
+      Restricts to customers ACQUIRED through one channel, which is not the same as
+      orders placed through that channel.
+    channel: "Restricts to one order channel."
+    segment: "Restricts to one customer segment."
+    category: "Restricts to one product category."
+    region: "Restricts to one region."
+    product: "Restricts to one product by name."
+    product_id: "Restricts to one product by id."
+    racket_type: "Restricts to power, control or balanced rackets."
+    price_tier: "Restricts to entry, mid or premium products."
+    is_performance: >
+      1 restricts to performance rackets as the segmentation guide defines them.
+    recalled: "1 restricts to products under active recall."
+    campaign_id: "Restricts to orders attributed to one campaign."
+  dimension_notes:
+    product: >
+      An order containing several products is counted once per product row, so
+      product values do not sum to the ungrouped total.
+
+sql:
+  source: orders
+  value: "COUNT(DISTINCT o.id)"
+  sample_size: "COUNT(DISTINCT o.id)"
+  where: "o.status = 'completed' AND o.channel != 'wholesale'"
+
+evaluation:
+  direction: higher_better
+  benchmark_source: benchmarks.yaml
+  seasonal_pattern:
+    - "March through May run above band; December runs below by design."
+
+framing:
+  required_caveats:
+    - "Excludes test and wholesale orders, so it is lower than a raw row count."
+  companions: [net_revenue, aov]
+  companion_rationale: >
+    Order count and AOV together decompose revenue. Revenue up with flat order
+    count means bigger baskets; revenue up with flat AOV means more customers.
+  when_not_to_use:
+    - "Do not use as a customer count; one customer places many orders."
+
+reliability:
+  min_sample: null
+  is_census: true
+  census_note: >
+    A count of rows, not a rate estimated from a sample, so a small number is
+    exact rather than unreliable.
+  coverage: []
+  definition_caveats:
+    - "counts orders, not customers, and not units"
+  cannot_answer:
+    - "wholesale order volume (excluded by definition)"
+    - "quote or cart volume (only placed orders exist in the data)"
+
+access:
+  path: metrics_engine
+  raw_sql_allowed: false

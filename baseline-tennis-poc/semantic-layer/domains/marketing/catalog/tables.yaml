@@ -1,0 +1,217 @@
+# Table descriptors. These document what the underlying data means and where the
+# traps are. They are catalog entries for discovery and context, NOT an access
+# path: the agent never queries these tables directly in the semantic server.
+
+asset_type: table
+
+tables:
+  - id: orders
+    grain: one row per order
+    row_count_approx: 90000
+    access: metrics_engine_only
+    summary: >
+      Purchase transactions. Contains rows that must be excluded from marketing
+      reporting, which is the single most important fact about this table.
+    traps:
+      - trap: test rows
+        detail: >
+          status = 'test' rows are written by QA into production with realistic
+          amounts, about 2 percent of rows. They are not real revenue.
+      - trap: wholesale rows
+        detail: >
+          channel = 'wholesale' rows are a separate business line with baskets
+          several times larger than retail, about 5 percent of rows. Including
+          them overstates marketing revenue substantially.
+      - trap: refunded status
+        detail: >
+          A fully refunded order carries status = 'refunded', not 'completed'.
+          Revenue metrics exclude it; refund rate must include it, or the metric
+          would exclude the events it measures.
+    correct_filter: "status = 'completed' AND channel != 'wholesale'"
+    consequence_of_omitting: >
+      Gross revenue over all rows runs roughly a third above the governed net
+      figure. This is the trap a raw SQL agent falls into.
+    key_columns:
+      id: order key
+      customer_id: joins to customers.id
+      order_date: transaction date
+      gross_amount: booked value before refunds
+      refund_amount: refunded value, netted into the period it posts
+      channel: last touch channel, or wholesale for the wholesale line
+      status: completed, refunded, or test
+      campaign_id: attributed campaign, nullable
+    served_by_metrics: [net_revenue, aov, refund_rate, repeat_purchase_rate, revenue_per_email, segment_ltv]
+
+  - id: customers
+    grain: one row per customer account
+    row_count_approx: 18000
+    access: metrics_engine_only
+    summary: >
+      Customer accounts with segment, region, last touch acquisition channel, and
+      the referral link. Source of the governed signups metric.
+    key_columns:
+      id: customer key
+      segment: competitive or recreational, recomputed monthly
+      region: northeast, southeast, midwest, west
+      signup_date: account creation date
+      acquisition_channel: LAST TOUCH channel credited with the signup
+      referred_by: referring customer id, nullable
+    semantics:
+      referred_by_null: >
+        NULL means the signup was not attributed to a referral. It does NOT mean
+        the customer has no relationships. Referral credit requires a member link
+        or code, so word of mouth referrals without a code are invisible here.
+      acquisition_channel: >
+        Last touch only. A customer who saw three ads then searched is credited
+        entirely to paid search.
+    served_by_metrics: [new_customer_signups, segment_ltv, repeat_purchase_rate]
+
+  - id: email_sends
+    grain: one row per message sent to one customer
+    row_count_approx: 355000
+    access: metrics_engine_only
+    summary: >
+      Email send log with delivery and engagement flags. The machine_opened flag
+      is the critical column.
+    traps:
+      - trap: machine opens
+        detail: >
+          machine_opened = 1 marks an open recorded by a privacy proxy prefetching
+          images, not a human. Roughly a third of all recorded opens. Counting
+          opened = 1 without excluding these inflates open rate by several points.
+      - trap: transactional mail
+        detail: >
+          email_type = 'transactional' covers order confirmations and shipping
+          notices. These are operational, have much higher engagement, and are not
+          marketing performance. Excluded from every governed email metric.
+      - trap: sent versus delivered
+        detail: >
+          The correct denominator is delivered = 1, not total rows. Undelivered
+          mail could not have been opened.
+    key_columns:
+      campaign_id: attributed campaign, nullable for lifecycle and transactional
+      customer_id: joins to customers.id
+      send_date: send timestamp
+      delivered: reached the inbox
+      opened: an open was recorded, human OR machine
+      machine_opened: the open was a privacy proxy prefetch, not a human
+      clicked: a click was recorded, requires deliberate human action
+      email_type: lifecycle, campaign, or transactional
+    served_by_metrics: [email_open_rate, email_click_rate, revenue_per_email]
+
+  - id: ad_spend
+    grain: one row per channel per day
+    access: metrics_engine_only
+    summary: >
+      Daily paid media spend, clicks, and attributed signups by channel. Source of
+      the governed CAC metric.
+    coverage_gaps:
+      - gap: paid_social spend missing early
+        detail: >
+          Paid social spend tracking was implemented late. There are NO rows for
+          paid_social before month 7 of the 24 month window. Activity happened but
+          was never logged, so CAC for paid social cannot be computed for earlier
+          periods. Do not extrapolate backward.
+    semantics:
+      organic_rows: >
+        Organic appears with zero spend for volume context. It has no CAC, because
+        dividing by zero spend is not a cost of acquisition.
+      attributed_signups: >
+        From the ad platform feed, last touch. Will not tie exactly to a count
+        from the customers table.
+    key_columns:
+      date: spend date
+      channel: paid_search, paid_social, or organic
+      spend: media spend, zero for organic
+      clicks: ad clicks
+      attributed_signups: last touch attributed signups
+    served_by_metrics: [cac]
+
+  - id: suppliers
+    grain: one row per vendor
+    row_count_approx: 5
+    access: metrics_engine_only
+    summary: >
+      The vendors behind the brands, with the terms that drive merchandising
+      decisions: lead time, payment terms, minimum order value.
+    key_columns:
+      id: supplier key, joined from products.supplier_id
+      name: vendor name
+      country: country of origin
+      lead_time_days: order to delivery, the number that constrains a season
+      payment_terms: net 30 or net 60
+      minimum_order_value: the size of the smallest sensible bet
+      relationship_since: when we started buying
+    semantics:
+      lead_time: >
+        Anything beyond six weeks cannot be reordered inside a season, so a core
+        stockout in a long lead time brand persists. This is the structural cause
+        of most availability problems.
+      own_label: >
+        Own label products have a NULL supplier_id: they are not bought in.
+    served_by_metrics: [gross_margin, margin_rate]
+
+  - id: products
+    grain: one row per SKU
+    row_count_approx: 120
+    access: metrics_engine_only
+    summary: Product catalog with category, price, and recall flag.
+    key_columns:
+      id: product key
+      category: rackets, strings, shoes, apparel, or services
+      name: product name, prefixed with the brand
+      price: list price
+      recalled: under active recall
+      brand: one of seven brands, including the own label "House"
+      supplier_id: joins to suppliers, NULL for own label
+      unit_cost: what we paid, the basis for margin
+      stock_level: CURRENT level only, no history exists
+      launch_date: when the line was introduced
+      lifecycle_stage: new, core, clearance or discontinued
+      racket_type: power, control or balanced, rackets only
+      head_size_sq_in: rackets only
+      price_tier: entry, mid or premium, within its category band
+      is_performance: meets the segmentation guide's performance racket criterion
+    semantics:
+      services_category: >
+        Services (restringing, grip replacement) run under 30 orders a month
+        across the whole business, below the reliability threshold. Category level
+        services numbers are real but thin and must be labeled directional.
+      recalled_flag: >
+        Exactly one string product is under recall. It was promoted in the Spring
+        League Kickoff campaign. See string-recall-notice for the date and scope.
+        A recalled product is pulled from sale: zero stock, discontinued.
+      brand_positioning: >
+        Baseline, Cordage and Meridian are the performance brands and carry the
+        thinnest margins by design. Kestrel, Northline and Apex are value brands.
+        House is own label at roughly seventy percent margin. Competitive players
+        skew heavily to the performance brands and recreational players to the
+        value ones.
+      stock_level: >
+        CURRENT level only. There is no movement log and no history, so how long
+        or how often a line has been out of stock cannot be answered. Read a stock
+        number against lifecycle_stage: a clearance line at zero is a success, a
+        core line at zero in season is a failure.
+      unit_cost: >
+        The cost on the product record TODAY, not the cost at the time of a
+        historical sale, so margin on old orders is approximate if costs moved.
+
+  - id: order_items
+    grain: one row per product per order
+    access: metrics_engine_only
+    summary: Line items joining orders to products. Required for category dimensions.
+    semantics:
+      category_double_counting: >
+        An order containing items from two categories contributes to both
+        category slices, so category values do not sum to the ungrouped total.
+        This is expected and must be stated when reporting a category split.
+
+  - id: campaigns
+    grain: one row per campaign
+    row_count_approx: 63
+    access: metrics_engine_only
+    summary: Campaign definitions with dates, channel, and budget.
+    semantics:
+      spring_campaign: >
+        The Spring League Kickoff is the largest campaign, running March through
+        mid May. It promoted the string that was later recalled.

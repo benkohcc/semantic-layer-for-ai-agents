@@ -1,0 +1,78 @@
+id: segment_ltv
+label: Segment Lifetime Value
+one_line: Average cumulative net revenue per customer, by segment. Historical, not projected.
+
+definition:
+  description: >
+    Average net revenue realized per customer to date, grouped by segment. This is
+    a BACKWARD LOOKING figure: revenue already earned, divided by customers. It is
+    not a predicted lifetime value.
+  formula: "SUM(net revenue) / COUNT(DISTINCT customers)"
+  source_table: customers left joined to orders
+  filters:
+    - "orders: status = 'completed' AND channel != 'wholesale'"
+  join_note: >
+    A LEFT join is required. Customers who never ordered must stay in the
+    denominator at zero revenue, otherwise the figure becomes revenue per buyer
+    and overstates value substantially.
+  additive: false
+  additive_note: "An average per customer. Never sum across segments; re derive."
+  grain:
+    minimum: all_time
+    default: all_time
+  dimensions: [segment, region, acquisition_channel]
+  available_filters:
+    segment: "Restricts to one customer segment (competitive, recreational)."
+    region: "Restricts to one region."
+    acquisition_channel: "Restricts to customers acquired through one channel."
+
+evaluation:
+  direction: higher_better
+  benchmark_source: benchmarks.yaml
+  known_pattern:
+    - >
+      Competitive customers are worth roughly twice recreational customers. The gap
+      is structural: they restring frequently and buy performance rackets. This is
+      the expected ordering, not a finding.
+    - >
+      Note that AOV is nearly IDENTICAL between the two segments, because
+      competitive players buy small baskets often (restrings) while recreational
+      players buy large baskets rarely (apparel, shoes), and the two effects very
+      nearly cancel. FREQUENCY is what makes competitive customers valuable. THIS
+      metric answers segment value questions; AOV cannot, and would imply the
+      segments are equally valuable when one is worth 2.2 times the other.
+
+framing:
+  required_caveats:
+    - >
+      HISTORICAL, not projected. This is realized revenue to date per customer, so
+      it is biased downward for young cohorts who have not had time to accumulate
+      value. It is not a lifetime value forecast and must not be presented as one.
+    - >
+      Customers who never ordered are included at zero, which is correct for a per
+      customer average but makes the figure lower than revenue per buyer.
+  companions:
+    - repeat_purchase_rate
+    - cac
+  companion_rationale: >
+    LTV is only decision relevant against acquisition cost. Compare to CAC by
+    channel for payback, and to repeat rate to see whether value comes from
+    frequency or basket size.
+  when_not_to_use:
+    - "Do not use as a predicted LTV or in a payback model that assumes future revenue; this layer does not forecast."
+    - "Do not compare across cohorts of different ages without noting the tenure difference."
+
+reliability:
+  min_sample: 100
+  coverage: []
+  definition_caveats:
+    - "historical realized value, not a projection; young cohorts are structurally understated"
+    - "segment is recomputed monthly, so a customer's historical revenue may have been earned while they were in the other segment"
+    - "customers who never ordered are included at zero revenue"
+  cannot_answer:
+    - "predicted or projected lifetime value (forecasting is out of scope for this layer)"
+    - "lifetime value net of cost to serve (only revenue is in scope, not margin or fulfillment cost)"
+
+access:
+  path: metrics_engine
+  raw_sql_allowed: false

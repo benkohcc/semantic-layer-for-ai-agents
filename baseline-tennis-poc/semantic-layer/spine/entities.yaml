@@ -1,0 +1,150 @@
+# Shared spine: the thin set of entities and definitions every domain package
+# agrees on. Domain packages hang off this; the spine itself stays small.
+
+spine_version: 1
+
+entities:
+  customer:
+    key: customers.id
+    grain: one row per customer account
+    description: >
+      A person with an account at Baseline Tennis Co. Identity is the account,
+      not the household, so two players sharing an address are two customers.
+    attributes:
+      segment:
+        values: [competitive, recreational]
+        definition_source: segmentation-guide
+        note: >
+          Behavioral classification recomputed monthly, not self reported. A
+          customer can move between segments over time.
+      region:
+        values: [northeast, southeast, midwest, west]
+      acquisition_channel:
+        values: [organic, paid_search, paid_social, email, referral]
+        note: >
+          Last touch attribution: the final marketing touch before signup gets
+          full credit. This is the only attribution the data supports.
+      referred_by:
+        type: nullable customer key
+        note: >
+          NULL means the signup was not attributed to a referral. It does NOT
+          mean the customer has no relationships. Referral credit requires the
+          referred customer to use a member link or code, so word of mouth
+          referrals without a code are invisible here.
+
+  order:
+    key: orders.id
+    grain: one row per order
+    description: A purchase transaction, including test and wholesale rows.
+    attributes:
+      status:
+        values: [completed, refunded, test]
+        note: >
+          'test' rows are written by QA into production and carry realistic
+          amounts. They must never appear in marketing reporting.
+      channel:
+        values: [web, email, paid_search, paid_social, wholesale]
+        note: >
+          'wholesale' is a separate business line with different unit economics
+          and much larger baskets. It must be excluded from marketing metrics.
+
+  product:
+    key: products.id
+    grain: one row per SKU
+    attributes:
+      category:
+        values: [rackets, strings, shoes, apparel, services]
+      recalled:
+        type: boolean
+        note: A product under active safety or quality recall.
+
+  campaign:
+    key: campaigns.id
+    grain: one row per campaign
+
+  email_send:
+    key: email_sends.id
+    grain: one row per message sent to one customer
+
+# ---------------------------------------------------------------------------
+# Definitions that must be identical across every domain package.
+# ---------------------------------------------------------------------------
+
+shared_definitions:
+  marketing_order_filter:
+    rule: "status = 'completed' AND channel != 'wholesale'"
+    rationale: >
+      Every marketing metric over orders applies this filter. Test rows are not
+      real revenue and wholesale is not marketing revenue. Omitting the filter
+      overstates revenue by roughly a third.
+    enforced_by: metrics_engine
+
+  net_vs_gross:
+    rule: "marketing revenue is net of refunds; finance reports gross"
+    governed_choice: net
+    rationale: >
+      Marketing measures the revenue it can be held to after returns. Finance
+      measures booked revenue. Both are correct for their purpose. When a
+      document quotes gross and the metrics layer reports net, the metrics
+      layer is authoritative and the difference should be named, not hidden.
+
+  churn:
+    observed: false
+    rule: "no completed order in the trailing 12 months"
+    rationale: >
+      Baseline Tennis Co. is retail. There is no subscription and no
+      cancellation event, so churn is never directly observed. Every churn
+      number is an inference from purchase silence.
+    disclosure_required: true
+    disclosure_text: >
+      Churn here is inferred from purchase silence (no completed order in the
+      trailing 12 months), not observed from a cancellation event.
+
+  attribution:
+    model: last_touch
+    rule: "the final marketing touch before the conversion gets full credit"
+    cannot_support:
+      - multi touch attribution
+      - fractional or weighted credit across a path
+      - incrementality or lift measurement without an experiment
+    rationale: >
+      Tracking records one touch per conversion. There is no touch path in the
+      data, so multi touch questions cannot be answered, only declined.
+
+  reliability_threshold:
+    default_min_sample: 100
+    rule: >
+      A result computed on fewer than min_sample underlying rows ships with a
+      low_confidence flag and must be labeled directional in the answer.
+
+# ---------------------------------------------------------------------------
+# Data the business does not have. Declared once, here, so no domain package
+# has to guess.
+# ---------------------------------------------------------------------------
+
+absent_data:
+  - concept: customer satisfaction, sentiment, NPS
+    status: not_collected
+    detail: >
+      There is no survey instrument, no survey table, and no third party
+      sentiment feed. Nothing in the warehouse measures how customers feel.
+    nearest_available: [repeat_purchase_rate, refund_rate]
+    nearest_caveat: >
+      Both are behavioral proxies. Neither measures sentiment, and a customer
+      can be unhappy and still repurchase, or happy and simply not need
+      anything.
+
+  - concept: multi touch attribution
+    status: not_supported_by_data
+    detail: Attribution is last touch only; the data has no touch path.
+
+  - concept: forecasts, projections, predicted values
+    status: out_of_scope
+    detail: >
+      This layer reports actuals. Trend history is available, but a trend
+      restated as a prediction is not a forecast and must not be presented as
+      one.
+
+  - concept: competitor pricing and market share
+    status: not_collected
+    detail: No competitor feed exists. Any such claim would be qualitative.

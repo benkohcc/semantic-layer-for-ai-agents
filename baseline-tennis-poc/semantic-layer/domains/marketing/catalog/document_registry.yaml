@@ -1,0 +1,273 @@
+# DOCUMENT REGISTRY: the external record of which document is in force.
+#
+# This file exists because of a design flaw in the first version of this POC.
+# Every document used to declare its own authority in its header ("Authority:
+# canonical", "Status: HISTORICAL", "NOT ADOPTED"), and the superseded ones
+# announced their own obsolescence. That made the authority ranking demo
+# meaningless: even a naive keyword search could tell which document was stale by
+# reading the first three lines.
+#
+# Real documents do not work like that. A policy written in 2024 was simply the
+# policy. Nobody went back and stamped "superseded" on it when the 2025 version
+# landed, because the person writing the 2025 version had no way to reach into
+# every copy of the old one. The knowledge that it was replaced lives OUTSIDE the
+# document, in whatever system tracks which version is current: a CMS, a wiki
+# hierarchy, a governance spreadsheet, an approval workflow.
+#
+# This registry is that system. The documents contain only their content. Every
+# statement about status, precedence and supersession is here, and retrieval reads
+# it rather than the document text.
+#
+# WHY THIS MATTERS FOR THE THESIS: the semantic layer's job is to supply the
+# governance that the raw artifact cannot supply about itself. If the document
+# already said "I am obsolete", there would be nothing for the layer to add.
+
+registry_version: 3
+
+# ---------------------------------------------------------------------------
+# RELATIONSHIPS between documents and the things they govern.
+#
+# Vector similarity answers "what does the corpus SAY about X". It cannot answer
+# "how do things in the corpus RELATE to X", because similarity finds text that
+# sounds alike and has no notion of one document governing another. These edges
+# are what makes the second kind of question answerable.
+#
+# Most edges are already implicit in the fields below and cost nothing to
+# traverse: `supersedes` and `superseded_by` give version history, `lineage`
+# gives document families, `approved_by` gives ownership.
+#
+# `governs` is different: it has to be authored, because nothing in a document
+# states which product categories or segments it applies to. It is declared HERE
+# rather than in document frontmatter for the same reason status is: a document
+# is not a reliable narrator about its own scope, and putting it in the file
+# would reintroduce exactly the self-declaration problem this registry removed.
+#
+# Currently authored for the DISCOUNTING slice only. Documents without a
+# `governs` edge are not reachable by scope traversal, which is a coverage gap
+# rather than a statement that they govern nothing.
+# ---------------------------------------------------------------------------
+
+relationship_types:
+  - edge: supersedes
+    from: document
+    to: document
+    derived: true
+    detail: Already present as supersedes / superseded_by. Version history.
+  - edge: in_lineage
+    from: document
+    to: lineage
+    derived: true
+    detail: Already present as lineage. Document families.
+  - edge: owned_by
+    from: document
+    to: team
+    derived: true
+    detail: Already present as approved_by. Ownership lookup.
+  - edge: governs
+    from: document
+    to: product_category | segment | topic
+    derived: false
+    detail: >
+      Authored. The scope a document has authority over. This is the edge that
+      answers "which policies apply to racket discounting", which similarity
+      cannot reach at all.
+
+# ---------------------------------------------------------------------------
+# How precedence is decided, in order. Applied by retrieval.py, not by reading
+# the document.
+# ---------------------------------------------------------------------------
+
+precedence_rules:
+  - rank: 1
+    rule: status
+    detail: >
+      in_force beats draft beats superseded beats withdrawn. A document with no
+      registry entry is treated as unknown status and ranks below everything
+      registered, because an unregistered document is one nobody is maintaining.
+
+  - rank: 2
+    rule: effective_date
+    detail: >
+      Within the same status, the later effective_date wins. This is what
+      discriminates two documents that were BOTH legitimately in force at
+      different times, which is the common real case and the harder one: neither
+      document is wrong, they just describe different periods.
+
+  - rank: 3
+    rule: similarity
+    detail: >
+      Only after status and date. A stale document that scores higher on vector
+      similarity still loses, and the original similarity rank is reported so the
+      override is visible rather than silent.
+
+# ---------------------------------------------------------------------------
+# Document status. The document files themselves say none of this.
+# ---------------------------------------------------------------------------
+
+documents:
+
+  # ---- refund policy lineage --------------------------------------------
+  # Two documents, one lineage. The 2024 file reads as a perfectly ordinary
+  # policy: it does not know it was never adopted, because a draft never does.
+  - id: refund-policy-2026
+    file: refund-policy-2026.md
+    status: in_force
+    effective_date: "2026-01-01"
+    supersedes: [refund-policy-2024]
+    lineage: refund-policy
+    approved_by: Customer Operations
+    review_cycle: annual
+
+  - id: refund-policy-2024
+    file: refund-policy-2024.md
+    status: draft
+    effective_date: null
+    superseded_by: refund-policy-2026
+    lineage: refund-policy
+    never_adopted: true
+    registry_note: >
+      Circulated for review in 2024 and abandoned. The 30 day window and the
+      restocking fee were never in force at any point. NOTHING IN THE DOCUMENT
+      SAYS SO: it is written as a policy, because that is what a draft policy
+      looks like. This is the authority ranking test, and it is only a real test
+      because the file gives no clue.
+
+  # ---- stringing SLA lineage --------------------------------------------
+  # The harder case. Both of these were genuinely in force, so neither is wrong.
+  # Only the effective date separates them.
+  - id: stringing-sla-2026
+    file: stringing-sla-2026.md
+    status: in_force
+    effective_date: "2026-01-01"
+    supersedes: [stringing-sla-2025]
+    lineage: stringing-sla
+    approved_by: Service Operations
+    review_cycle: annual
+
+  - id: stringing-sla-2025
+    file: stringing-sla-2025.md
+    status: superseded
+    effective_date: "2025-01-01"
+    superseded_by: stringing-sla-2026
+    lineage: stringing-sla
+    registry_note: >
+      Correct for 2025 and wrong for today. Every commitment in it was tightened
+      for 2026, so quoting it to a customer promises worse service than we offer.
+      The document cannot tell you this: it was accurate when written and nobody
+      edited it afterwards. An answer about 2025 performance SHOULD use it; an
+      answer about current commitments must not.
+
+  # ---- competitor lineage ------------------------------------------------
+  - id: competitive-landscape-2026
+    file: competitive-landscape-2026.md
+    status: in_force
+    effective_date: "2026-01-15"
+    supersedes: [competitor-landscape-2024]
+    lineage: competitive-landscape
+    approved_by: Strategy
+    review_cycle: annual
+
+  - id: competitor-landscape-2024
+    file: competitor-landscape-2024.md
+    status: superseded
+    effective_date: "2024-03-01"
+    superseded_by: competitive-landscape-2026
+    lineage: competitive-landscape
+    registry_note: >
+      Two years stale. Its read on the direct-from-manufacturer channel is now
+      wrong, and it predates our stringing capacity expansion. Reads as current
+      because a competitor review always does.
+
+  # ---- media plan lineage ------------------------------------------------
+  # Three quarters of the same recurring document. Only the newest is operative,
+  # and the older ones are indistinguishable from it in tone and structure.
+  - id: q3-media-plan
+    file: q3-media-plan.md
+    status: in_force
+    effective_date: "2026-07-01"
+    supersedes: [q2-media-plan]
+    lineage: media-plan
+    approved_by: Growth Marketing
+    review_cycle: quarterly
+
+  - id: q2-media-plan
+    file: q2-media-plan.md
+    status: superseded
+    effective_date: "2026-04-01"
+    superseded_by: q3-media-plan
+    lineage: media-plan
+    registry_note: >
+      The previous quarter's plan. It documents a DIFFERENT budget posture and no
+      paid search pause, so citing it as the cause of a July signup drop would be
+      confidently wrong about the right kind of thing. Same author, same template,
+      same confident tone as the current plan.
+
+  # ---- everything else: single version, in force ------------------------
+  - {id: email-program-overview, file: email-program-overview.md,
+     status: in_force, effective_date: "2025-11-01", review_cycle: annual,
+     approved_by: Lifecycle Marketing}
+  - {id: spring-campaign-recap, file: spring-campaign-recap.md,
+     status: in_force, effective_date: "2025-05-20", document_class: recap_deck,
+     approved_by: Campaign Marketing,
+     registry_note: "A point in time recap, never restated. Its figures are gross and unfiltered."}
+  - {id: segmentation-guide, file: segmentation-guide.md,
+     status: in_force, effective_date: "2025-09-01", review_cycle: annual,
+     approved_by: Marketing Analytics}
+  - {id: string-recall-notice, file: string-recall-notice.md,
+     status: in_force, effective_date: "2025-03-31", approved_by: Product Quality}
+  - {id: brand-voice, file: brand-voice.md,
+     status: in_force, effective_date: "2025-06-01", review_cycle: annual}
+  - {id: promo-calendar, file: promo-calendar.md,
+     status: in_force, effective_date: "2026-01-01", review_cycle: annual,
+     approved_by: Campaign Marketing,
+     governs: [discounting, rackets, strings, shoes, apparel, services],
+     governs_note: "Sets WHEN discounting happens across the calendar. Scope is
+       every category, because the promotional rhythm is catalog wide."}
+  - {id: stringing-service-faq, file: stringing-service-faq.md,
+     status: in_force, effective_date: "2026-01-05", review_cycle: annual}
+  - {id: loyalty-program-terms, file: loyalty-program-terms.md,
+     status: in_force, effective_date: "2025-04-01", review_cycle: annual}
+  - {id: shipping-and-fulfillment, file: shipping-and-fulfillment.md,
+     status: in_force, effective_date: "2025-08-01", review_cycle: annual}
+  - {id: email-deliverability-runbook, file: email-deliverability-runbook.md,
+     status: in_force, effective_date: "2025-10-01",
+     approved_by: Lifecycle Marketing}
+  - {id: data-and-reporting-notes, file: data-and-reporting-notes.md,
+     status: in_force, effective_date: "2026-02-01", review_cycle: quarterly,
+     approved_by: Marketing Analytics}
+  - {id: supplier-terms-and-lead-times, file: supplier-terms-and-lead-times.md,
+     status: in_force, effective_date: "2026-01-20", review_cycle: annual,
+     approved_by: Merchandising}
+  - {id: brand-and-supplier-guide, file: brand-and-supplier-guide.md,
+     status: in_force, effective_date: "2026-01-20", review_cycle: annual,
+     approved_by: Merchandising}
+  - {id: customer-personas, file: customer-personas.md,
+     status: in_force, effective_date: "2025-07-01", review_cycle: annual,
+     approved_by: Marketing}
+  - {id: merchandising-playbook, file: merchandising-playbook.md,
+     status: in_force, effective_date: "2026-01-10", review_cycle: quarterly,
+     approved_by: Merchandising,
+     governs: [discounting, rackets, strings, shoes, apparel],
+     governs_note: "Defines the lifecycle stages (new, core, clearance) that
+       determine whether a line may be discounted at all. Does not cover
+       services, which have no lifecycle."}
+  - {id: pricing-and-discount-policy, file: pricing-and-discount-policy.md,
+     status: in_force, effective_date: "2026-01-01", review_cycle: quarterly,
+     approved_by: Merchandising and Finance,
+     governs: [discounting, rackets, strings, shoes, apparel, services],
+     governs_note: "The controlling document for discount DEPTH and approval
+       authority. Names a margin target for every category, so it governs all
+       five."}
+  - {id: seasonal-planning-calendar, file: seasonal-planning-calendar.md,
+     status: in_force, effective_date: "2026-01-01", review_cycle: annual}
+  - {id: customer-service-themes, file: customer-service-themes.md,
+     status: in_force, effective_date: "2026-04-01", review_cycle: quarterly,
+     document_class: qualitative_summary, approved_by: Customer Operations}
+  - {id: inventory-health-notes, file: inventory-health-notes.md,
+     status: in_force, effective_date: "2026-06-01", review_cycle: monthly,
+     approved_by: Merchandising}
+  - {id: transactional-email-operations, file: transactional-email-operations.md,
+     status: in_force, effective_date: "2025-09-15", approved_by: Engineering}
+  - {id: stringing-operations-manual, file: stringing-operations-manual.md,
+     status: in_force, effective_date: "2026-02-01", review_cycle: annual,
+     document_class: long_reference, approved_by: Service Operations}
