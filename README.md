@@ -51,19 +51,25 @@ query can reach.
 
 ```mermaid
 flowchart TB
-    K1["💬 <b>Chat threads</b><br/>the caveat someone posted<br/>once, three years ago"]
-    K2["📊 <b>Slide footnotes</b><br/>the exclusion that made<br/>the number correct"]
-    K3["🧠 <b>People</b><br/>'that always dips in Q4,<br/>it is not a problem'"]
-    K4["📁 <b>Shared drives</b><br/>which version was<br/>actually adopted"]
-    K5["🎫 <b>Tickets &amp; PRs</b><br/>why the instrumentation<br/>changed in March"]
+    K1["💬 Chat threads
+    the caveat someone posted once, three years ago"]
+    K2["📊 Slide footnotes
+    the exclusion that made the number correct"]
+    K3["🧠 People
+    'that always dips in Q4, it is not a problem'"]
+    K4["📁 Shared drives
+    which version was actually adopted"]
+    K5["🎫 Tickets and PRs
+    why the instrumentation changed in March"]
 
-    K1 -.-> X(["✕ &nbsp;<b>none of it is on the query path</b>"])
+    K1 -.-> X(["✕  none of it is on the query path"])
     K2 -.-> X
     K3 -.-> X
     K4 -.-> X
     K5 -.-> X
 
-    X -.-> S["<b>What a query can actually see</b><br/>table names &nbsp;·&nbsp; column names &nbsp;·&nbsp; rows"]
+    X -.-> S["What a query can actually see
+    table names · column names · rows"]
 
     style K1 fill:#fffbe6,stroke:#d4a017
     style K2 fill:#fffbe6,stroke:#d4a017
@@ -274,11 +280,17 @@ computes.
 
 ```mermaid
 flowchart LR
-    A["find a population<br/><i>by attributes</i>"] --> H
-    B["find a population<br/><i>by relationships</i>"] --> H
-    C["find a population<br/><i>from a campaign</i>"] --> H
-    H(["a <b>reference</b><br/>never a number"]) --> M["<b>the one engine<br/>that computes</b>"]
-    M --> N["governed number<br/>+ range, caveats, confidence"]
+    A["find a population
+    by attributes"] --> H
+    B["find a population
+    by relationships"] --> H
+    C["find a population
+    from a campaign"] --> H
+    H(["a reference
+    never a number"]) --> M["the one engine
+    that computes"]
+    M --> N["governed number
+    plus range, caveats, confidence"]
 
     style M fill:#fffbe6,stroke:#d4a017,stroke-width:3px
     style H fill:#ffffff,stroke:#8899aa,stroke-dasharray: 4 3
