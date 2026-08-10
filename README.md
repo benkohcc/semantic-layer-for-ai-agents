@@ -134,30 +134,43 @@ layer is what turns scattered sources into one governed surface an agent can
 actually use.
 
 ```mermaid
-flowchart TB
-    AG["🤖 &nbsp;<b>AI AGENTS &amp; ASSISTANTS</b> &nbsp;·&nbsp; ask in plain language, get governed answers"]
-    T["<b>INTERFACE</b> &nbsp;·&nbsp; a small set of governed tools<br/>one connection &nbsp;·&nbsp; plain-language questions &nbsp;·&nbsp; no raw query access"]
-    E["<b>ENGINES</b> &nbsp;·&nbsp; execute the knowledge, own none of it<br/>compute &nbsp;·&nbsp; retrieve &nbsp;·&nbsp; traverse &nbsp;·&nbsp; interpret"]
-    K["⭐ &nbsp;<b>SEMANTIC KNOWLEDGE</b> &nbsp;·&nbsp; written down, not coded &nbsp;·&nbsp; <i>this is the layer</i><br/>metric definitions &amp; exclusions &nbsp;·&nbsp; document registry &nbsp;·&nbsp; procedures<br/>vocabulary mapping &nbsp;·&nbsp; declared gaps &nbsp;·&nbsp; interpretation rules"]
-    SRC["<b>YOUR EXISTING SOURCES</b> &nbsp;·&nbsp; read in place, never moved<br/>🗄️ warehouse &nbsp;·&nbsp; 📄 documents &nbsp;·&nbsp; 🔍 vector index &nbsp;·&nbsp; 🕸️ relationships"]
+block-beta
+  columns 1
 
-    AG <--> T
-    T <--> E
-    E <--> K
-    K <--> SRC
+  ag["AI AGENTS AND ASSISTANTS
+  ask in plain language · never write a query · never choose a store"]
 
-    style AG fill:#eef4fa,stroke:#1e4e79,stroke-width:3px
-    style T fill:#ffffff,stroke:#1e4e79,stroke-width:2px
-    style E fill:#ffffff,stroke:#8899aa,stroke-width:2px
-    style K fill:#fffbe6,stroke:#d4a017,stroke-width:4px
-    style SRC fill:#f4f6f8,stroke:#8899aa,stroke-width:2px
+  i["INTERFACE
+  a small set of governed tools · one connection · no raw query path"]
+
+  e["ENGINES
+  compute · retrieve · traverse · interpret · own no business knowledge"]
+
+  k["⭐  THE SEMANTIC LAYER: WRITTEN KNOWLEDGE  ⭐
+  definitions and exclusions · document registry · procedures
+  vocabulary mapping · declared gaps · interpretation rules"]
+
+  d["YOUR EXISTING SOURCES · read in place, never moved
+  warehouse · documents · vector index · relationships"]
+
+  classDef agent fill:#dbe7f3,stroke:#1e4e79,stroke-width:3px,color:#16293b,font-size:15px;
+  classDef iface fill:#eef4fa,stroke:#1e4e79,stroke-width:2px,color:#16293b,font-size:15px;
+  classDef eng fill:#f7f9fb,stroke:#8899aa,stroke-width:2px,color:#16293b,font-size:15px;
+  classDef know fill:#fbf3c4,stroke:#d4a017,stroke-width:4px,color:#16293b,font-size:15px;
+  classDef src fill:#eceff2,stroke:#8899aa,stroke-width:2px,color:#16293b,font-size:15px;
+
+  class ag agent
+  class i iface
+  class e eng
+  class k know
+  class d src
 ```
 
-Every request travels down the stack and back up. **The knowledge tier is the
-only one that could not be derived from the tiers below it**, which is why it is
-the layer worth building.
+Each tier rests on the one below it, and an agent only ever touches the top.
+**The knowledge tier is the only one that could not be derived from the tiers
+underneath it**, which is why it is the layer worth building.
 
-Reading the cake from the bottom:
+Reading the cake from the bottom up:
 
 | Tier | What it is | Who owns it |
 |---|---|---|
