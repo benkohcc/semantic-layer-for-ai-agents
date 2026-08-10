@@ -8,7 +8,7 @@ instead of guessing from raw data.
 Everything runs on your machine. SQLite for data and traversal, ChromaDB for
 vectors. No Docker, no cloud, no API key for the demo.
 
-**New here?** [../OVERVIEW.md](../OVERVIEW.md) explains the concept, the problem,
+**New here?** [../README.md](../README.md) explains the concept, the problem,
 and the value in plain language, with no setup or code. This README is the
 operator's manual: how to run it, how it is built, and how it was verified.
 
