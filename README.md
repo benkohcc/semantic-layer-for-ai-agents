@@ -50,26 +50,27 @@ mechanism to retire.
 query can reach.
 
 ```mermaid
+%%{init: {'themeVariables': {'fontSize': '17px'}}}%%
 flowchart TB
-    K1["💬 Chat threads
-    the caveat someone posted once, three years ago"]
-    K2["📊 Slide footnotes
-    the exclusion that made the number correct"]
-    K3["🧠 People
-    'that always dips in Q4, it is not a problem'"]
-    K4["📁 Shared drives
-    which version was actually adopted"]
-    K5["🎫 Tickets and PRs
-    why the instrumentation changed in March"]
+    K1["`**💬 Chat threads**
+    the caveat someone posted once, three years ago`"]
+    K2["`**📊 Slide footnotes**
+    the exclusion that made the number correct`"]
+    K3["`**🧠 People**
+    'that always dips in Q4, it is not a problem'`"]
+    K4["`**📁 Shared drives**
+    which version was actually adopted`"]
+    K5["`**🎫 Tickets and PRs**
+    why the instrumentation changed in March`"]
 
-    K1 -.-> X(["✕  none of it is on the query path"])
+    K1 -.-> X(["`**✕ none of it is on the query path**`"])
     K2 -.-> X
     K3 -.-> X
     K4 -.-> X
     K5 -.-> X
 
-    X -.-> S["What a query can actually see
-    table names · column names · rows"]
+    X -.-> S["`**What a query can actually see**
+    table names · column names · rows`"]
 
     style K1 fill:#fffbe6,stroke:#d4a017
     style K2 fill:#fffbe6,stroke:#d4a017
@@ -140,6 +141,7 @@ layer is what turns scattered sources into one governed surface an agent can
 actually use.
 
 ```mermaid
+%%{init: {'themeVariables': {'fontSize': '18px'}}}%%
 block-beta
   columns 1
 
@@ -152,18 +154,18 @@ block-beta
   e["ENGINES
   compute · retrieve · traverse · interpret · own no business knowledge"]
 
-  k["⭐  THE SEMANTIC LAYER: WRITTEN KNOWLEDGE  ⭐
+  k["⭐ THE SEMANTIC LAYER: WRITTEN KNOWLEDGE ⭐
   definitions and exclusions · document registry · procedures
   vocabulary mapping · declared gaps · interpretation rules"]
 
   d["YOUR EXISTING SOURCES · read in place, never moved
   warehouse · documents · vector index · relationships"]
 
-  classDef agent fill:#dbe7f3,stroke:#1e4e79,stroke-width:3px,color:#16293b,font-size:15px;
-  classDef iface fill:#eef4fa,stroke:#1e4e79,stroke-width:2px,color:#16293b,font-size:15px;
-  classDef eng fill:#f7f9fb,stroke:#8899aa,stroke-width:2px,color:#16293b,font-size:15px;
-  classDef know fill:#fbf3c4,stroke:#d4a017,stroke-width:4px,color:#16293b,font-size:15px;
-  classDef src fill:#eceff2,stroke:#8899aa,stroke-width:2px,color:#16293b,font-size:15px;
+  classDef agent fill:#dbe7f3,stroke:#1e4e79,stroke-width:3px,color:#16293b;
+  classDef iface fill:#eef4fa,stroke:#1e4e79,stroke-width:2px,color:#16293b;
+  classDef eng fill:#f7f9fb,stroke:#8899aa,stroke-width:2px,color:#16293b;
+  classDef know fill:#fbf3c4,stroke:#d4a017,stroke-width:4px,color:#16293b;
+  classDef src fill:#eceff2,stroke:#8899aa,stroke-width:2px,color:#16293b;
 
   class ag agent
   class i iface
@@ -279,18 +281,19 @@ Tools that find populations return a **reference**, never a number. One engine
 computes.
 
 ```mermaid
+%%{init: {'themeVariables': {'fontSize': '17px'}}}%%
 flowchart LR
-    A["find a population
-    by attributes"] --> H
-    B["find a population
-    by relationships"] --> H
-    C["find a population
-    from a campaign"] --> H
-    H(["a reference
-    never a number"]) --> M["the one engine
-    that computes"]
-    M --> N["governed number
-    plus range, caveats, confidence"]
+    A["`**find a population**
+    by attributes`"] --> H
+    B["`**find a population**
+    by relationships`"] --> H
+    C["`**find a population**
+    from a campaign`"] --> H
+    H(["`**a reference**
+    never a number`"]) --> M["`**the one engine
+    that computes**`"]
+    M --> N["`**governed number**
+    plus range, caveats, confidence`"]
 
     style M fill:#fffbe6,stroke:#d4a017,stroke-width:3px
     style H fill:#ffffff,stroke:#8899aa,stroke-dasharray: 4 3
