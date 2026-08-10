@@ -13,49 +13,75 @@ implementation you can run.**
 
 ## The problem
 
-Your warehouse holds facts. It does not hold what those facts **mean**.
+Your systems hold facts. They do not hold what those facts **mean**.
 
-| Your data has | Your data does not say |
+That missing meaning falls into five categories. Every organization past a certain
+age has all five, whatever industry it is in.
+
+| | What is missing | Why it exists | If nobody supplies it |
+|---|---|---|---|
+| **1** | **Which records count** | Test data, internal accounts, and cancelled transactions live alongside real ones and look identical | Totals silently include things that were never real |
+| **2** | **Which definition applies** | The same word means different things to different teams, and each is correct for its own purpose | Two answers to one question, and no way to tell which was asked |
+| **3** | **Which segments are comparable** | Business lines, regions, and channels have genuinely different economics | Unlike things get averaged into a number describing nothing |
+| **4** | **Which measurements are trustworthy** | Instrumentation changes, tracking degrades, and old data was collected differently | A metric shift gets read as behaviour change when it was a tooling change |
+| **5** | **Which document is authoritative** | Policies and plans accumulate versions, and drafts survive alongside what replaced them | Confident citation of something that was never adopted |
+
+**None of this is exotic.** It is the normal state of any system that grew over
+time: instrumentation added mid-stream, terms that drifted apart between
+departments, business lines acquired or spun up, and documents nobody had a
+mechanism to retire.
+
+<details>
+<summary><b>What these look like concretely</b> (examples from the reference implementation)</summary>
+
+| Category | In the demo warehouse |
 |---|---|
-| A `status` column | that `status='test'` rows are QA artifacts someone wrote into production in 2019 |
-| A `revenue` figure | whether marketing counts it net of refunds while finance counts it gross, and that both are right |
-| A `channel` column | that one of those channels is a separate business line with different unit economics |
-| An `opened` flag on emails | that a third of those opens were image prefetches no human performed |
-| A folder of policies | which one is currently in force |
+| Which records count | `status='test'` rows are QA artifacts written into production, indistinguishable from real orders |
+| Which definition applies | Marketing counts revenue net of refunds; finance counts it gross. Both are right for their own purpose |
+| Which segments are comparable | One `channel` value is a wholesale business line with much larger baskets and different unit economics |
+| Which measurements are trustworthy | A third of recorded email opens are image prefetches by privacy proxies that no human performed |
+| Which document is authoritative | A 2024 refund policy that was drafted, circulated, and abandoned. Nothing in the file says so |
 
-None of this is exotic. It is **the normal state of a warehouse that grew over
-time**, and every organization past a certain age has all five.
+</details>
 
 ### Where the missing meaning actually lives
 
-It is not lost. It is simply nowhere a query can reach.
+**It is not lost. Someone knows all five.** It is simply recorded in places no
+query can reach.
 
 ```mermaid
 flowchart TB
-    K1["💬 <b>A Slack thread</b><br/>'those test rows are QA<br/>fixtures, exclude them'"]
-    K2["📊 <b>A slide footnote</b><br/>'* excludes the wholesale<br/>business line'"]
-    K3["🧠 <b>A senior analyst</b><br/>'December always dips,<br/>it is not a problem'<br/><i>retiring next year</i>"]
-    K4["📁 <b>A folder of docs</b><br/>'the 2024 policy was<br/>never actually adopted'"]
+    K1["💬 <b>Chat threads</b><br/>the caveat someone posted<br/>once, three years ago"]
+    K2["📊 <b>Slide footnotes</b><br/>the exclusion that made<br/>the number correct"]
+    K3["🧠 <b>People</b><br/>'that always dips in Q4,<br/>it is not a problem'"]
+    K4["📁 <b>Shared drives</b><br/>which version was<br/>actually adopted"]
+    K5["🎫 <b>Tickets &amp; PRs</b><br/>why the instrumentation<br/>changed in March"]
 
-    K1 -.-> X(["✕ &nbsp;never on the query path"])
+    K1 -.-> X(["✕ &nbsp;<b>none of it is on the query path</b>"])
     K2 -.-> X
     K3 -.-> X
     K4 -.-> X
+    K5 -.-> X
 
-    X -.-> S["<b>What a query can see</b><br/>table names · column names · rows"]
+    X -.-> S["<b>What a query can actually see</b><br/>table names &nbsp;·&nbsp; column names &nbsp;·&nbsp; rows"]
 
     style K1 fill:#fffbe6,stroke:#d4a017
     style K2 fill:#fffbe6,stroke:#d4a017
     style K3 fill:#fffbe6,stroke:#d4a017
     style K4 fill:#fffbe6,stroke:#d4a017
+    style K5 fill:#fffbe6,stroke:#d4a017
     style X fill:#fdecea,stroke:#be3d2a,stroke-width:2px
     style S fill:#eef4fa,stroke:#1e4e79,stroke-width:2px
 ```
 
-**Documents are worse than tables.** A policy written in 2024 does not say *"I was
-replaced in 2026."* Nobody went back to stamp it, because the person writing the
-replacement had no way to reach every copy of the old one. It reads as confident
-and complete, because it was, once.
+And the fifth category is worse than the other four, because documents actively
+mislead:
+
+> **A policy written in 2024 does not say "I was replaced in 2026."** Nobody went
+> back to stamp it, because the person writing the replacement had no way to reach
+> every copy of the old one. A superseded document reads as confident and
+> complete, in exactly the same voice as a current one, **because it was current
+> when it was written.**
 
 ---
 
@@ -154,7 +180,12 @@ meaning got written down.
 | **3** | **How to get it** | One governed path per asset. Exclusions are applied automatically because no path skips them |
 | **4** | **How to interpret it** | The part most implementations skip. Every number arrives with its normal range, direction of goodness, seasonality, caveats, and confidence |
 
-The fourth is what separates a semantic layer from a data catalog. A catalog tells
+Those four close the five gaps from the top of this document: **what it means**
+covers which records count, which definition applies, and which segments are
+comparable; **how to interpret it** covers which measurements are trustworthy; and
+governance inside **how to get it** covers which document is authoritative.
+
+The fourth supply is what separates a semantic layer from a data catalog. A catalog tells
 you a metric exists. A semantic layer tells you **whether the number you just got
 is good news**, and what would make it misleading.
 
