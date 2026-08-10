@@ -450,8 +450,6 @@ with Claude Desktop or Claude Code and ask it questions in plain language.
 | Path | What |
 |---|---|
 | [baseline-tennis-poc/README.md](baseline-tennis-poc/README.md) | **The operator's manual**: build, run, verify, demo script, design rationale |
-| [semantic-layer-explained.html](semantic-layer-explained.html) | The same argument as an illustrated page |
-| [PLAN.md](PLAN.md) | The original build plan |
 | `baseline-tennis-poc/semantic-layer/` | **The knowledge**: definitions, registry, playbooks, ontology |
 | `baseline-tennis-poc/src/` | The engines, which contain no business knowledge |
 | `baseline-tennis-poc/mcp_server.py` | Nine tools. A raw SQL tool is never among them |
