@@ -7,7 +7,7 @@ implementation you can run.**
 > Slack threads, and the tribal knowledge of who to ask. The question is whether a
 > machine can reach it.
 
-**Jump to:** [The problem](#the-problem) · [Why AI makes it urgent](#why-ai-turns-a-nuisance-into-a-liability) · [What a semantic layer is](#what-a-semantic-layer-is) · [Design principles](#the-design-principles) · [Adopting one](#what-adoption-actually-costs) · [The reference implementation](#the-reference-implementation)
+**Jump to:** [The problem](#the-problem) · [Why AI makes it urgent](#why-ai-turns-a-nuisance-into-a-liability) · [What a semantic layer is](#what-a-semantic-layer-is) · [Design principles](#the-design-principles) · [The reference implementation](#the-reference-implementation)
 
 ---
 
@@ -318,26 +318,11 @@ missing concept becomes an adjacent metric presented as the thing you asked for.
 > more than doing the work yourself. **Reliable refusal is what makes the reliable
 > answers usable.**
 
----
+### Where this pays back
 
-## What adoption actually costs
-
-Worth being honest about, because the work is real and it is not mostly
-engineering.
-
-| | Effort | Who does it |
-|---|---|---|
-| **Stand up the engines** | Weeks. Mostly plumbing, and it is done once | Engineering |
-| **Write the first domain's definitions** | The real work. Every exclusion, caveat, and limit made explicit | Analysts + domain owners |
-| **Build the document registry** | Moderate, if someone already tracks document currency. Painful if nobody does | Whoever owns the docs |
-| **Declare the gaps** | Fast, and usually the highest value per hour spent | Domain owners |
-| **Keep it current** | Ongoing. A definition change is a file edit, not a ticket | Domain owners |
-
-**The hard part is not building it. The hard part is that writing the definitions
-forces disagreements into the open**, and those disagreements were always there,
-just unresolved and invisible in three teams' conflicting dashboards.
-
-### Where it pays back
+Those five principles are not free: writing the definitions down forces
+disagreements into the open, and the effort falls on domain owners rather than
+engineers. What you get for it:
 
 - **Wrong answers are expensive and invisible.** A revenue overstatement does not
   announce itself. Someone builds a forecast on it, and the failure surfaces a
@@ -348,13 +333,6 @@ just unresolved and invisible in three teams' conflicting dashboards.
   survives the analyst who knew it. A rule in someone's head does not.
 - **Every new agent inherits the governance.** The second and third use case cost a
   fraction of the first, because the knowledge is already written.
-
-### Start narrow
-
-The failure mode for this kind of project is **one company-wide ontology,
-negotiated by committee, delivered never.** The alternative that works: a thin
-shared spine plus one self-contained domain, in production, with a second domain
-added later without renegotiating the first.
 
 ---
 
